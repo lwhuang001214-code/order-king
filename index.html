@@ -447,6 +447,16 @@
         const ROWS_PAGE_N = 20; 
         let imgData = null; let logoData = null; 
 
+        // --- 離開前存檔提醒：只要內容有變動且尚未存 JSON，關閉分頁/視窗前會跳出瀏覽器警告視窗 ---
+        let hasUnsavedChanges = false;
+        window.addEventListener('beforeunload', function (e) {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '您尚未儲存 JSON 檔案，確定要離開嗎？'; // 注意：基於瀏覽器安全機制，實際顯示文字由瀏覽器決定，無法自訂
+                return e.returnValue;
+            }
+        });
+
         // --- 手機版：側邊欄抽屜開關 ---
         function toggleSidebar() {
             document.getElementById('sidebarPanel').classList.toggle('open');
@@ -525,6 +535,7 @@
             document.getElementById('bHeader').checked = false; toggleChk('bHeader'); document.getElementById('bDetail').checked = false; toggleChk('bDetail'); document.getElementById('bFooter').checked = true; toggleChk('bFooter');
             imgData = null; logoData = null; document.getElementById('imgInput').value = ''; document.getElementById('logoInput').value = '';
             document.getElementById('sizeList').innerHTML = ''; addSize(); render();
+            hasUnsavedChanges = false;
         }
 
         function loadLogo(input) { if(input.files && input.files[0]) { const r = new FileReader(); r.onload = e => { logoData = e.target.result; render(); }; r.readAsDataURL(input.files[0]); } }
@@ -555,6 +566,7 @@
         }
 
         function render() {
+            hasUnsavedChanges = true; // 任何內容變動都視為尚未存檔，載入/重置流程結束後會再重設為 false
             const getVal = id => document.getElementById(id).value;
             const getChk = id => document.getElementById(id).checked;
             const styles = {
@@ -657,7 +669,8 @@
                     const handle = await window.showSaveFilePicker({ suggestedName: fName, types: [{ description: 'JSON File', accept: {'application/json': ['.json']} }] });
                     const writable = await handle.createWritable(); await writable.write(jsonStr); await writable.close();
                 } else { saveAs(new Blob([jsonStr], {type: "application/json;charset=utf-8"}), fName); }
-            } catch (err) { if (err.name !== 'AbortError') alert("存檔失敗：" + err.message); }
+                hasUnsavedChanges = false; // 存檔成功，取消「尚未存檔」的離開警告
+            } catch (err) { if (err.name !== 'AbortError') alert("存檔失敗：" + err.message); } // 使用者取消存檔或存檔失敗時，仍視為尚未存檔，離開時繼續提醒
         }
 
         function loadProject(input) {
@@ -686,6 +699,7 @@
                         }); 
                     } else { addSize(); }
                     render();
+                    hasUnsavedChanges = false; // 剛讀取完成，內容與檔案一致，尚無新變更
                 } catch(e) { alert('格式錯誤'); }
                 input.value = '';
             };
@@ -790,6 +804,23 @@
             });
         }
 
+        // --- Excel 圖片配置工具：統一處理「等比縮放 + 置中」，避免不同尺寸的LOGO/示意圖開啟時跑版變形 ---
+        const XLS_CHAR_PX = 7;         // Calibri 11 預設，每一欄寬字元單位約略對應的像素寬
+        const XLS_PT_PER_PX = 0.75;    // 1px ≈ 0.75pt（96dpi 換算）
+        const XLS_COLA_PX = 15 * XLS_CHAR_PX; // A欄實際字元寬(15) 換算出的像素寬，做為欄位偏移換算基準
+        const XLS_AREA_PX = 93 * XLS_CHAR_PX; // A:E 合併區域總字元寬(15+15+3+30+30=93) 換算出的像素寬
+
+        // 依方框(maxW x maxH)等比縮小/放大圖片，永遠維持原始寬高比，絕不拉伸變形
+        function xlsFitBox(imgW, imgH, maxW, maxH, maxUpscale = 3) {
+            let scale = Math.min(maxW / imgW, maxH / imgH);
+            scale = Math.min(scale, maxUpscale); // 避免過小的圖片被放大過頭而模糊
+            return { w: imgW * scale, h: imgH * scale };
+        }
+        // 計算讓圖片在指定寬度的區域內「水平置中」所需要的欄位偏移量(ExcelJS的col為 欄位索引.該欄內的比例)
+        function xlsCenterColOffset(itemW, areaPx = XLS_AREA_PX) {
+            return Math.max(0, (areaPx - itemW) / 2) / XLS_COLA_PX;
+        }
+
         async function exportToExcel() {
             const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('製單');
             ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
@@ -800,10 +831,14 @@
 
             if (logoData) {
                 const logoPng = await toPngDataUrl(logoData);
+                // LOGO 方框固定為寬160 x 高55，不論原圖多大/多長都等比縮放進這個框，並水平置中，保留列高與方框一致，避免與標題重疊或跑版
+                const LOGO_BOX_W = 160, LOGO_BOX_H = 55, LOGO_ROWS = 3;
+                const { w, h } = xlsFitBox(logoPng.width, logoPng.height, LOGO_BOX_W, LOGO_BOX_H);
+                const colOffset = xlsCenterColOffset(w);
                 const logoId = wb.addImage({ base64: logoPng.dataUrl, extension: 'png' });
-                const ratio = logoPng.width / logoPng.height;
-                ws.addImage(logoId, { tl: { col: 2.2, row: 0.2 }, ext: { width: 60 * ratio, height: 60 }, editAs: 'oneCell' });
-                ws.addRow([]); ws.addRow([]); ws.addRow([]);
+                ws.addImage(logoId, { tl: { col: colOffset, row: 0.1 }, ext: { width: w, height: h }, editAs: 'oneCell' });
+                const logoRowHeightPt = (LOGO_BOX_H * XLS_PT_PER_PX) / LOGO_ROWS;
+                for (let i = 0; i < LOGO_ROWS; i++) { const r = ws.addRow([]); r.height = logoRowHeightPt; }
             }
 
             const r1 = ws.addRow([document.getElementById('vTitle').value]); ws.mergeCells(`A${r1.number}:E${r1.number}`); r1.height = 35;
@@ -815,19 +850,20 @@
                 [2, 5].forEach(c => { r.getCell(c).font = { color: { argb: sHead.argb }, bold: sHead.bold }; r.getCell(c).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; });
             });
 
+            // 示意圖方框固定為寬550 x 高330，保留列的實際列高總和精確等於這個高度，
+            // 這樣不論上傳的圖片是直的、橫的、還是正方形，永遠會等比縮放並完整落在方框內，不會超出邊框或跑位
+            const IMG_BOX_W = 550, IMG_BOX_H = 330, IMG_ROWS = 15;
             const imgLabelRow = ws.addRow(['示意圖/圖稿：']); imgLabelRow.font = { bold: true }; ws.mergeCells(`A${imgLabelRow.number}:E${imgLabelRow.number}`);
-            const iStart = imgLabelRow.number + 1; for(let i=0; i<15; i++) ws.addRow(['']);
+            const iStart = imgLabelRow.number + 1;
+            const imgRowHeightPt = (IMG_BOX_H * XLS_PT_PER_PX) / IMG_ROWS;
+            for (let i = 0; i < IMG_ROWS; i++) { const r = ws.addRow(['']); r.height = imgRowHeightPt; }
             const iEnd = ws.rowCount; ws.mergeCells(`A${iStart}:E${iEnd}`);
-            if(imgData) {
+            if (imgData) {
                 const mainPng = await toPngDataUrl(imgData);
-                // 依原始寬高比例縮放圖片，避免被強制拉伸變形；並在示意圖框內水平置中
-                const maxW = 550, maxH = 350;
-                const scale = Math.min(maxW / mainPng.width, maxH / mainPng.height);
-                const w = mainPng.width * scale;
-                const h = mainPng.height * scale;
-                const areaWidthPx = 93 * 7; // A:E 合併區域概略像素寬（對應 ws.columns 設定總字元寬 93 x 每字元約7px）
-                const colOffset = Math.max(0, (areaWidthPx - w) / 2) / (15 * 7); // 換算成以A欄字元寬度為單位的欄位偏移，達到水平置中
-                ws.addImage(wb.addImage({ base64: mainPng.dataUrl, extension: 'png' }), { tl: { col: colOffset, row: iStart - 1 + 0.1 }, ext: { width: w, height: h }, editAs: 'oneCell' });
+                const { w, h } = xlsFitBox(mainPng.width, mainPng.height, IMG_BOX_W, IMG_BOX_H);
+                const colOffset = xlsCenterColOffset(w);
+                const rowOffsetUnits = Math.max(0, (IMG_BOX_H - h) / 2) / IMG_BOX_H * IMG_ROWS; // 垂直置中：換算成列偏移量
+                ws.addImage(wb.addImage({ base64: mainPng.dataUrl, extension: 'png' }), { tl: { col: colOffset, row: iStart - 1 + 0.05 + rowOffsetUnits }, ext: { width: w, height: h }, editAs: 'oneCell' });
             }
 
             const detText = document.getElementById('vDetail').value;
