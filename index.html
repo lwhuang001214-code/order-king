@@ -253,7 +253,7 @@
             background: rgba(15,17,30,0.5); backdrop-filter: blur(2px);
         }
 
-        @media (max-width: 900px) {
+        @media screen and (max-width: 900px) {
             .mobile-toggle-btn { display: flex; }
             body.sidebar-open .mobile-toggle-btn { display: none; }
             body { overflow: hidden; }
@@ -643,7 +643,8 @@
                 wrap.appendChild(sheet); area.appendChild(wrap);
             });
 
-            updateMobileScale();
+            // 新增/移除頁面(尤其是尺寸太多自動產生第二頁)後，等瀏覽器真正排版完成再量測寬度，避免用到舊的、還沒更新的尺寸導致縮放比例算錯、預覽跑版
+            requestAnimationFrame(() => requestAnimationFrame(updateMobileScale));
         }
 
         async function saveProject() {
@@ -709,11 +710,27 @@
             reader.readAsText(input.files[0]);
         }
 
+        // iOS Safari 對「強制下載」(a[download]、jsPDF內建save()) 支援非常不穩定，常常按了完全沒反應，
+        // 需要偵測 iOS 後改用「開新分頁直接顯示檔案，讓使用者用系統內建的分享/儲存」的方式
+        function isIOSDevice() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
         async function exportToPdf() {
             const sheets = document.querySelectorAll('.sheet'); if(sheets.length === 0) return;
             const defaultFileName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
             const inputFileName = prompt("請輸入 PDF 檔案名稱：", defaultFileName);
             if (inputFileName === null || inputFileName.trim() === "") return; 
+
+            const iosMode = isIOSDevice();
+            let mobileWin = null;
+            if (iosMode) {
+                // 必須在使用者點擊當下、還沒執行任何 await 前就先開好空白分頁，
+                // 不然等PDF產出完才呼叫 window.open() 會被 Safari 判定為非使用者操作而擋下彈出視窗
+                mobileWin = window.open('', '_blank');
+                if (mobileWin) mobileWin.document.write('<body style="background:#111;color:#fff;font-family:-apple-system,sans-serif;padding:20px;">PDF 產出中，請稍候...</body>');
+            }
+
             showLoading(true, `PDF 產出中 (共 ${sheets.length} 頁)，請稍候...`);
             try {
                 const { jsPDF } = window.jspdf; const doc = new jsPDF('p', 'mm', 'a4');
@@ -727,24 +744,60 @@
                     sheets[i].style.transform = prevTransform;
                     doc.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
                 }
-                doc.save(`${inputFileName.trim()}.pdf`);
-            } catch(e) { alert("PDF 產出失敗。"); } finally { showLoading(false); }
+                if (iosMode) {
+                    // 用 blob URL 導向新分頁，Safari 會用內建 PDF 檢視器開啟，使用者可再點右上角分享→儲存到「檔案」
+                    if (mobileWin) { mobileWin.location.href = doc.output('bloburl'); }
+                    else { alert('請允許此網站開啟新視窗，才能顯示 PDF 供您儲存'); }
+                } else {
+                    doc.save(`${inputFileName.trim()}.pdf`);
+                }
+            } catch(e) { if (mobileWin) mobileWin.close(); alert("PDF 產出失敗：" + e.message); } finally { showLoading(false); }
         }
 
         async function exportToJpeg() {
             const sheets = document.querySelectorAll('.sheet'); if(sheets.length === 0) return;
+
+            const iosMode = isIOSDevice();
+            let mobileWin = null;
+            if (iosMode) {
+                // 同上：先在使用者點擊當下開好空白分頁，避免被判定為非使用者操作而擋下
+                mobileWin = window.open('', '_blank');
+                if (mobileWin) mobileWin.document.write('<body style="background:#111;color:#fff;font-family:-apple-system,sans-serif;padding:20px;">圖片產出中，請稍候...</body>');
+            }
+
             showLoading(true, `圖片產出中 (共 ${sheets.length} 張)，請稍候...`);
             try {
                 const baseName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
+                const images = [];
                 for(let i=0; i<sheets.length; i++) {
                     const prevTransform = sheets[i].style.transform;
                     sheets[i].style.transform = 'none';
                     const targetWidth = sheets[i].offsetWidth, targetHeight = sheets[i].offsetHeight;
                     const canvas = await html2canvas(sheets[i], { scale: 2, useCORS: true, width: targetWidth, height: targetHeight, windowWidth: targetWidth, windowHeight: targetHeight });
                     sheets[i].style.transform = prevTransform;
-                    const link = document.createElement('a'); link.download = `${baseName}_P${i+1}.jpg`; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                    if (iosMode) {
+                        images.push(dataUrl);
+                    } else {
+                        const link = document.createElement('a'); link.download = `${baseName}_P${i+1}.jpg`; link.href = dataUrl; link.click();
+                    }
                 }
-            } catch(e) { alert("圖片產出失敗"); } finally { showLoading(false); }
+                if (iosMode) {
+                    if (mobileWin) {
+                        // iOS 沒有下載資料夾，改成整頁列出圖片，使用者長按圖片點「儲存圖片」即可存到「照片」相簿
+                        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${baseName}</title>
+                            <style>body{background:#111;margin:0;padding:16px;font-family:-apple-system,sans-serif;color:#fff;text-align:center;}
+                            p{font-size:15px;color:#ddd;margin:0 0 16px;}
+                            img{width:100%;max-width:600px;margin-bottom:20px;border-radius:6px;display:block;margin-left:auto;margin-right:auto;box-shadow:0 4px 14px rgba(0,0,0,0.4);}</style>
+                            </head><body><p>📌 長按每張圖片，選擇「儲存圖片」即可存到手機相簿</p>
+                            ${images.map((src,i)=>`<img src="${src}" alt="第${i+1}頁">`).join('')}
+                            </body></html>`;
+                        mobileWin.document.open(); mobileWin.document.write(html); mobileWin.document.close();
+                    } else {
+                        alert('請允許此網站開啟新視窗，才能顯示圖片供您長按儲存');
+                    }
+                }
+            } catch(e) { if (mobileWin) mobileWin.close(); alert("圖片產出失敗：" + e.message); } finally { showLoading(false); }
         }
 
         function htmlToExcelRichText(htmlString) {
