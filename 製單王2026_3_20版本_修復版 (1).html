@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>製單王 Order King</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #5b5ef4;
+            --primary-light: #7b7ff8;
+            --primary-dark: #3a3dc4;
+            --accent: #ff5da2;
+            --success: #14c9a8;
+            --success-dark: #0e9a83;
+            --warning: #ffab2e;
+            --warning-dark: #d47f0a;
+            --danger: #f5365c;
+            --danger-dark: #c11d40;
+            --dark: #171a2e;
+            --light: #f8f9fa;
+            --bg-color: #eef0fb;
+
+            --panel-width: 420px;
+            --a4-width: 210mm; 
+            --a4-height: 297mm;
+
+            --shadow-soft: 0 2px 8px rgba(23,26,46,0.06);
+            --shadow-mid: 0 10px 28px rgba(23,26,46,0.10);
+            --shadow-lift: 0 16px 40px rgba(91,94,244,0.18);
+            --radius-lg: 18px;
+            --radius-md: 12px;
+        }
+
+        * { scrollbar-color: #c7c9f5 transparent; }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', "Microsoft JhengHei", sans-serif;
+            margin: 0; padding: 0;
+            background: radial-gradient(circle at 15% 0%, #eae7ff 0%, transparent 45%),
+                        radial-gradient(circle at 100% 100%, #e3fbf6 0%, transparent 40%),
+                        var(--bg-color);
+            display: flex; height: 100vh;
+            overflow: hidden;
+            color: #2a2d45;
+        }
+
+        /* --- 左側控制面板 --- */
+        .sidebar {
+            width: var(--panel-width);
+            min-width: var(--panel-width);
+            background: #fff;
+            box-shadow: 6px 0 30px rgba(23,26,46,0.08);
+            display: flex; flex-direction: column;
+            z-index: 20;
+            border-right: 1px solid rgba(23,26,46,0.05);
+            position: relative;
+        }
+
+        .sidebar-header {
+            padding: 24px 26px;
+            background: linear-gradient(125deg, #2d2e6f 0%, var(--primary) 55%, #8b3dff 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(58, 61, 196, 0.35);
+            display: flex; align-items: center; gap: 15px;
+            position: relative; overflow: hidden;
+        }
+        .sidebar-header::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 85% -20%, rgba(255,255,255,0.35), transparent 55%),
+                        radial-gradient(circle at -10% 120%, rgba(255,93,162,0.35), transparent 50%);
+            pointer-events: none;
+        }
+        .app-icon-display {
+            width: 44px; height: 44px; background: white; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.18), 0 0 0 3px rgba(255,255,255,0.25);
+            position: relative; z-index: 1; flex-shrink: 0;
+        }
+        .app-icon-display svg { width: 30px; height: 30px; }
+        .sidebar-header h2 { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: 1.5px; color: white; position: relative; z-index: 1; }
+        .sidebar-header .subtitle { margin: 2px 0 0; font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.75); font-weight: 500; position: relative; z-index: 1; text-transform: uppercase; }
+
+        .sidebar-content {
+            flex: 1; overflow-y: auto; padding: 22px 20px;
+            display: flex; flex-direction: column; gap: 16px;
+            scrollbar-width: thin;
+        }
+        .sidebar-content::-webkit-scrollbar { width: 6px; }
+        .sidebar-content::-webkit-scrollbar-thumb { background: #d7d8f7; border-radius: 10px; }
+        .sidebar-content::-webkit-scrollbar-thumb:hover { background: #b9bbf2; }
+
+        .card {
+            background: #fff; border-radius: var(--radius-lg); padding: 18px;
+            box-shadow: var(--shadow-soft); border: 1px solid #eef0fb;
+            transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-mid); border-color: #e3e4fb; }
+        .card-title {
+            font-size: 0.95rem; font-weight: 700; color: #363a5c;
+            margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 10px; border-bottom: 1px solid #f0f1fa;
+        }
+        .card-title > span:first-child { display: flex; align-items: center; gap: 9px; }
+
+        .icon-badge {
+            width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+        }
+        .icon-badge-red { background: linear-gradient(135deg, #ff7a8a, var(--danger)); }
+        .icon-badge-indigo { background: linear-gradient(135deg, #7b7ff8, var(--primary)); }
+        .icon-badge-blue { background: linear-gradient(135deg, #56ccf2, #2f80ed); }
+        .icon-badge-teal { background: linear-gradient(135deg, #43e6c4, var(--success)); }
+        .icon-badge-orange { background: linear-gradient(135deg, #ffc26b, var(--warning)); }
+        .icon-badge-purple { background: linear-gradient(135deg, #b28dff, #7209b7); }
+        .icon-badge-pink { background: linear-gradient(135deg, #ff8fc0, var(--accent)); }
+
+        .btn-3d {
+            position: relative; display: inline-flex; justify-content: center; align-items: center;
+            font-weight: 700; text-decoration: none; color: white;
+            border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer;
+            transition: all 0.1s; font-size: 14px; gap: 8px; transform: translateY(0);
+        }
+        .btn-3d::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit;
+            background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 55%);
+            pointer-events: none;
+        }
+        .btn-3d:hover { filter: brightness(1.05); }
+        .btn-3d:active { transform: translateY(4px); box-shadow: 0 0px 0 0 transparent !important; filter: brightness(0.97); }
+        .btn-blue { background: linear-gradient(135deg, var(--primary-light), var(--primary)); box-shadow: 0 4px 0 var(--primary-dark), 0 6px 14px rgba(91,94,244,0.28); }
+        .btn-green { background: linear-gradient(135deg, #35e0bd, var(--success)); box-shadow: 0 4px 0 var(--success-dark), 0 6px 14px rgba(20,201,168,0.28); }
+        .btn-orange { background: linear-gradient(135deg, #ffc266, var(--warning)); box-shadow: 0 4px 0 var(--warning-dark), 0 6px 14px rgba(255,171,46,0.28); }
+        .btn-red { background: linear-gradient(135deg, #ff7a8a, var(--danger)); box-shadow: 0 4px 0 var(--danger-dark), 0 6px 14px rgba(245,54,92,0.28); }
+        .btn-purple { background: linear-gradient(135deg, #b28dff, #7209b7); box-shadow: 0 4px 0 #480ca8, 0 6px 14px rgba(114,9,183,0.28); }
+        .btn-teal { background: linear-gradient(135deg, #7be2ff, #4cc9f0); box-shadow: 0 4px 0 #4895ef, 0 6px 14px rgba(76,201,240,0.3); color: #0b2b3a; }
+        .btn-gray { background: linear-gradient(135deg, #aab4c4, #94a3b8); box-shadow: 0 4px 0 #64748b; }
+        .btn-white { background: #fff; color: #475569; border: 1px solid #dfe2f5; box-shadow: 0 3px 0 #c7cbe8; }
+        .btn-white:hover { border-color: var(--primary-light); color: var(--primary); }
+
+        input, textarea {
+            width: 100%; padding: 10px 12px;
+            border: 2px solid #e7e8f8; border-radius: 10px;
+            font-size: 14px; box-sizing: border-box; background: #f8f9fe;
+            font-family: inherit; transition: all 0.25s;
+        }
+        input:focus, textarea:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(91, 94, 244, 0.14); outline: none; }
+        textarea { resize: vertical; min-height: 80px; }
+        .row-2 { display: flex; gap: 10px; margin-bottom: 10px; } .row-2 > * { flex: 1; }
+
+        .tools { display: flex; gap: 8px; align-items: center; }
+        .color-circle {
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 2px solid #e7e8f8; overflow: hidden; cursor: pointer;
+            position: relative; box-shadow: 0 2px 6px rgba(23,26,46,0.12);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .color-circle:hover { transform: scale(1.08); box-shadow: 0 4px 10px rgba(91,94,244,0.3); }
+        input[type="color"] { position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; padding: 0; border: none; cursor: pointer; }
+        
+        .chk-3d {
+            cursor: pointer; padding: 5px 11px; border-radius: 8px;
+            background: #f1f2fb; color: #6b6f8f; font-weight: bold; font-size: 12px;
+            border: 1px solid #dfe2f5; box-shadow: 0 2px 0 #c7cbe8;
+            transition: all 0.15s; display: flex; align-items: center; gap: 5px;
+        }
+        .chk-3d:active { transform: translateY(2px); box-shadow: none; }
+        .chk-3d.active { background: linear-gradient(135deg, var(--primary-light), var(--primary)); color: white; border-color: var(--primary-dark); box-shadow: 0 2px 0 var(--primary-dark); }
+        .chk-3d input { display: none; }
+
+        /* --- 尺寸列與富文本編輯器 --- */
+        .size-item {
+            display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+            background: linear-gradient(180deg, #fbfbff, #f5f6fd); padding: 13px; border-radius: 12px; border: 1px solid #e7e8f8;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .size-item:hover { box-shadow: var(--shadow-soft); border-color: #d9dbf6; }
+        .size-row-top { display: flex; align-items: center; gap: 8px; width: 100%; }
+        .size-item.sortable-ghost { opacity: 0.4; background: #e2e8f0; }
+        .handle { cursor: grab; color: #a3a7cc; padding: 5px; font-size: 14px; }
+        
+        .rich-input {
+            padding: 8px; border: 2px solid #e7e8f8; border-radius: 10px;
+            background: #fff; font-size: 14px; outline: none; transition: all 0.25s;
+            overflow-wrap: anywhere; box-sizing: border-box; cursor: text;
+        }
+        .rich-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91, 94, 244, 0.14); }
+        .rich-input:empty:before { content: attr(data-placeholder); color: #a0aec0; pointer-events: none; }
+        
+        /* 修改：移除了 font-weight: 700，讓尺寸格子預設不加粗，以利看出效果 */
+        .inp-s { flex: 1; text-align: center; color: var(--primary); white-space: nowrap; overflow: hidden; }
+        .inp-q { flex: 1; text-align: center; font-weight: 700; color: var(--primary); }
+        
+        /* 修改：加入 resize: vertical 與 overflow-y: auto 讓備註框可以自由往下拉長放大 */
+        .inp-r { width: 100%; min-height: 50px; margin-top: 5px; resize: vertical; overflow-y: auto; }
+        
+        .btn-mini {
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; border: none; flex-shrink: 0;
+            background: #fff; border: 1px solid #dfe2f5; color: #6b6f8f; box-shadow: 0 2px 0 #c7cbe8;
+            transition: all 0.15s;
+        }
+        .btn-mini:active { transform: translateY(2px); box-shadow: none !important; }
+        .btn-mini-bold:hover { background: #eef0ff; color: var(--primary); border-color: var(--primary-light); }
+        .btn-mini-del { background: #fff0f2; border-color: #ffd0da; color: var(--danger); box-shadow: 0 2px 0 #ffb0be; }
+        .btn-mini-del:hover { background: var(--danger); color: #fff; }
+
+        .action-bar { padding: 20px; background: #fff; border-top: 1px solid #eef0fb; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -8px 24px rgba(23,26,46,0.05); position: relative; z-index: 5; }
+        .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        .preview-container {
+            flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 30px; position: relative;
+            background:
+                radial-gradient(circle at 1px 1px, rgba(23,26,46,0.10) 1px, transparent 0) 0 0/22px 22px,
+                linear-gradient(160deg, #4d5079 0%, #2e3057 55%, #1c1e38 100%);
+        }
+
+        .page-badge {
+            position: fixed; top: 20px; right: 30px; z-index: 15;
+            background: rgba(23,26,46,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            color: #fff; font-weight: 600; font-size: 13px;
+            padding: 9px 18px; border-radius: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; gap: 7px; pointer-events: none;
+        }
+        .page-badge i { color: #9ba3ff; }
+        
+        .sheet {
+            /* 關鍵修正：flex-shrink:0 讓A4紙張在任何內容量下都維持真實尺寸，
+               不會被外層 .preview-container 的 flex 版面壓扁變形（這是匯出PDF/JPG跑版的根本原因） */
+            flex-shrink: 0;
+            background: white; width: var(--a4-width); height: var(--a4-height);
+            min-height: var(--a4-height); max-height: var(--a4-height);
+            padding: 10mm 15mm 20mm 15mm; box-sizing: border-box;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.15); position: relative; margin-bottom: 20px;
+            overflow: hidden; border-radius: 3px;
+        }
+        .page-num { position: absolute; bottom: 8mm; right: 10mm; font-size: 10pt; color: #999; }
+
+        .logo-area { text-align: center; margin-bottom: 5px; } 
+        .logo-area img { max-height: 70px; max-width: 100%; object-fit: contain; }
+        .sheet-header { text-align: center; margin-bottom: 5px; }
+        .sheet-title { font-size: 24pt; font-weight: 800; letter-spacing: 4px; margin: 0; color: #000; }
+        
+        .info-grid { display: grid; grid-template-columns: 80px 1fr 80px 1fr; border: 2px solid #000; margin-bottom: 8px; }
+        .grid-cell { padding: 6px 8px; border: 1px solid #000; font-size: 11pt; display: flex; align-items: center; }
+        .cell-label { background: #eee; font-weight: bold; justify-content: center; }
+        
+        .img-area { width: 100%; height: 320px; border: 2px solid #000; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #fff; }
+        .img-area img { max-width: 98%; max-height: 98%; object-fit: contain; }
+        .img-area-small { width: 100%; height: 120px; border: 2px solid #000; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #fff; }
+        .img-area-small img { max-width: 98%; max-height: 98%; object-fit: contain; }
+        
+        .detail-area { display: grid; grid-template-columns: 1fr 180px; border: 2px solid #000; min-height: 80px; margin-bottom: 8px; }
+        .detail-text { padding: 8px; border-right: 1px solid #000; font-size: 11pt; white-space: pre-wrap; word-break: break-all; }
+        .date-area { padding: 8px; display: flex; flex-direction: column; align-items: center; }
+        
+        table.order-table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        table.order-table th, table.order-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 11pt; vertical-align: middle; word-break: break-all; }
+        table.order-table th { background: #eee; border-bottom: 2px solid #000; font-weight: bold; }
+        table.order-table td:last-child { text-align: left; padding-left: 8px; white-space: pre-wrap; }
+
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(23,26,46,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: white; display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 1000; gap: 18px; }
+        #loadingOverlay .loading-card {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px; padding: 34px 44px; display: flex; flex-direction: column; align-items: center; gap: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+        }
+        #loadingOverlay i { font-size: 2rem; background: linear-gradient(135deg, var(--primary-light), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        #loadingOverlay span { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.5px; }
+
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { background: white; display: block; overflow: visible; height: auto; }
+            .sidebar { display: none !important; }
+            .preview-container { padding: 0; margin: 0; background: white; display: block; overflow: visible; height: auto; }
+            .sheet { flex-shrink: 0; margin: 0; box-shadow: none; width: 100%; height: 297mm; max-height: 297mm; page-break-after: always; border: none; overflow: hidden; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay"><div class="loading-card"><i class="fas fa-spinner fa-spin"></i><span>處理中，請稍候...</span></div></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="app-icon-display">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20,30 L30,10 L70,10 L80,30 L90,25 L95,35 L80,60 L80,95 L20,95 L20,60 L5,35 L10,25 Z" fill="#5b5ef4" stroke="#3a3dc4" stroke-width="2"/><path d="M35,55 L40,40 L50,48 L60,40 L65,55 Z" fill="#ff5da2" stroke="#fff" stroke-width="1"/></svg>
+            </div>
+            <div>
+                <h2>製單王</h2>
+                <p class="subtitle">ORDER KING · 成衣製單系統</p>
+            </div>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="card" style="border-left: 4px solid var(--danger); background: linear-gradient(180deg, #fff6f7, #fff);">
+                <div class="card-title" style="color:var(--danger)"><span><span class="icon-badge icon-badge-red"><i class="fas fa-bolt"></i></span> 快速操作</span></div>
+                <button class="btn-3d btn-red" style="width:100%" onclick="if(confirm('確定要清空所有內容重新開始嗎？')) resetForm()"><i class="fas fa-trash-alt"></i> 清除重作</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-indigo"><i class="fas fa-building"></i></span> 公司 Logo</span></div>
+                <div style="display:flex; gap:10px;">
+                    <label class="btn-3d btn-white" style="flex:1"><i class="fas fa-upload"></i> 上傳 Logo<input type="file" id="logoInput" accept="image/*" onchange="loadLogo(this)" style="display:none"></label>
+                    <button class="btn-3d btn-gray" onclick="clearLogo()" title="清除 Logo"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-blue"><i class="fas fa-heading"></i></span> 單據標題</span>
+                    <div class="tools"><div class="color-circle"><input type="color" id="cTitle" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bTitle"><i class="fas fa-bold"></i><input type="checkbox" id="bTitle" checked onchange="toggleChk('bTitle'); render()"></label></div>
+                </div>
+                <input type="text" id="vTitle" value="成衣製造單" placeholder="輸入標題" oninput="render()">
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-teal"><i class="fas fa-id-card"></i></span> 基本資料</span>
+                    <div class="tools"><div class="color-circle"><input type="color" id="cHeader" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bHeader"><i class="fas fa-bold"></i><input type="checkbox" id="bHeader" onchange="toggleChk('bHeader'); render()"></label></div>
+                </div>
+                <div class="row-2"><input id="vUnit" placeholder="單位 (Unit)" oninput="render()"><input id="vVendor" placeholder="廠商 (Vendor)" oninput="render()"></div>
+                <div class="row-2"><input id="vStyle" placeholder="衣版 (Style)" oninput="render()"><input id="vColor" placeholder="顏色 (Color)" oninput="render()"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-orange"><i class="fas fa-image"></i></span> 示意圖與細節</span>
+                    <div class="tools"><div class="color-circle"><input type="color" id="cDetail" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bDetail"><i class="fas fa-bold"></i><input type="checkbox" id="bDetail" onchange="toggleChk('bDetail'); render()"></label></div>
+                </div>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <label class="btn-3d btn-white" style="flex:1"><i class="fas fa-image"></i> 上傳圖片<input type="file" id="imgInput" accept="image/*" onchange="loadImg(this)" style="display:none"></label>
+                    <button class="btn-3d btn-gray" onclick="clearImg()" title="清除圖片"><i class="fas fa-times"></i></button>
+                </div>
+                <textarea id="vDetail" placeholder="輸入製作注意事項..." oninput="render()"></textarea>
+                <div style="margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                    <i class="far fa-calendar-alt" style="color:var(--primary)"></i><label style="font-size:13px; font-weight:bold;">交期：</label><input type="date" id="vDate" oninput="render()" style="border:none; background:transparent; padding:0; height:auto;">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 5px;"><span><span class="icon-badge icon-badge-purple"><i class="fas fa-ruler-combined"></i></span> 尺寸與數量 (支援反白選字改色)</span></div>
+                <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0;">💡 提示：在輸入框反白文字，或直接點在框內，按 B 即可單獨改色或加粗。</p>
+                <div id="sizeList"></div>
+                <button class="btn-3d btn-white" style="width:100%; border:2px dashed #cbd5e1; color:#64748b; box-shadow:none;" onclick="addSize()"><i class="fas fa-plus-circle"></i> 新增尺寸列</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-pink"><i class="fas fa-thumbtack"></i></span> 底部備註</span>
+                    <div class="tools"><div class="color-circle"><input type="color" id="cFooter" value="#ff0000" oninput="render()"></div><label class="chk-3d active" id="lbl-bFooter"><i class="fas fa-bold"></i><input type="checkbox" id="bFooter" checked onchange="toggleChk('bFooter'); render()"></label></div>
+                </div>
+                <input id="vFooter" placeholder="例如: 總計無誤..." oninput="render()">
+            </div>
+            <div style="height:20px;"></div>
+        </div>
+
+        <div class="action-bar">
+            <div style="font-size:11px; font-weight:700; color:#9599c2; letter-spacing:1.5px; margin-bottom:2px;">
+                <i class="fas fa-file-export"></i> 匯出與存檔
+            </div>
+            <div class="action-row"><button class="btn-3d btn-green" onclick="saveProject()"><i class="fas fa-save"></i> 存 JSON</button><button class="btn-3d btn-orange" onclick="document.getElementById('loadInput').click()"><i class="fas fa-folder-open"></i> 讀 JSON</button><input type="file" id="loadInput" accept=".json" style="display:none" onchange="loadProject(this)"></div>
+            <div class="action-row"><button class="btn-3d btn-blue" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button><button class="btn-3d btn-purple" onclick="exportToPdf()"><i class="fas fa-file-pdf"></i> PDF</button></div>
+            <div class="action-row"><button class="btn-3d btn-teal" onclick="exportToJpeg()"><i class="fas fa-image"></i> JPG</button><button class="btn-3d btn-gray" style="background:linear-gradient(135deg,#3d4160,#171a2e); box-shadow:0 4px 0 #0b0d1a;" onclick="window.print()"><i class="fas fa-print"></i> 列印</button></div>
+        </div>
+    </div>
+
+    <div class="page-badge" id="pageBadge"><i class="fas fa-file-alt"></i> <span id="pageBadgeText">共 1 頁</span></div>
+    <div class="preview-container" id="previewArea"></div>
+
+    <script>
+        const ROWS_PAGE1 = 7; 
+        const ROWS_PAGE_N = 20; 
+        let imgData = null; let logoData = null; 
+
+        // --- 全域反白範圍捕捉 (Rich Text Editor 核心) ---
+        let lastSelectionRange = null;
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                let container = range.commonAncestorContainer;
+                if (container.nodeType === 3) container = container.parentNode;
+                // 確保使用者反白的地方是我們的「富文本輸入框」裡面
+                if (container.closest('.rich-input')) {
+                    lastSelectionRange = range;
+                }
+            }
+        });
+
+        // 升級版：支援「智慧全選」的格式套用
+        function applyFormatToSelection(command, value = null) {
+            if (!lastSelectionRange) return;
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastSelectionRange);
+            
+            // 智慧選取：如果沒有反白任何文字（只剩游標閃爍），就自動選取該輸入框「全部內容」來套用格式
+            if (sel.isCollapsed) {
+                let container = lastSelectionRange.commonAncestorContainer;
+                if (container.nodeType === 3) container = container.parentNode;
+                const richInput = container.closest('.rich-input');
+                if (richInput) {
+                    const range = document.createRange();
+                    range.selectNodeContents(richInput);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+
+            document.execCommand(command, false, value);
+            render();
+        }
+
+        window.onload = () => { 
+            resetForm(); 
+            Sortable.create(document.getElementById('sizeList'), { handle: '.handle', animation: 150, ghostClass: 'sortable-ghost', onEnd: render });
+        };
+
+        function showLoading(show, msg) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.style.display = show ? 'flex' : 'none';
+            if (show && msg) { const span = overlay.querySelector('span'); if (span) span.textContent = msg; }
+        }
+        function toggleChk(id) { const el = document.getElementById(id), lbl = document.getElementById('lbl-' + id); if(lbl) lbl.classList.toggle('active', el.checked); }
+
+        function resetForm() {
+            ['vTitle', 'vUnit', 'vVendor', 'vStyle', 'vColor', 'vDetail', 'vDate', 'vFooter'].forEach(id => { document.getElementById(id).value = (id === 'vTitle') ? '成衣製造單' : ''; });
+            document.getElementById('cHeader').value = '#000000'; document.getElementById('cDetail').value = '#000000'; document.getElementById('cFooter').value = '#ff0000';
+            document.getElementById('bHeader').checked = false; toggleChk('bHeader'); document.getElementById('bDetail').checked = false; toggleChk('bDetail'); document.getElementById('bFooter').checked = true; toggleChk('bFooter');
+            imgData = null; logoData = null; document.getElementById('imgInput').value = ''; document.getElementById('logoInput').value = '';
+            document.getElementById('sizeList').innerHTML = ''; addSize(); render();
+        }
+
+        function loadLogo(input) { if(input.files && input.files[0]) { const r = new FileReader(); r.onload = e => { logoData = e.target.result; render(); }; r.readAsDataURL(input.files[0]); } }
+        function clearLogo() { logoData = null; document.getElementById('logoInput').value = ''; render(); }
+        function loadImg(input) { if(input.files && input.files[0]) { const r = new FileReader(); r.onload = e => { imgData = e.target.result; render(); }; r.readAsDataURL(input.files[0]); } }
+        function clearImg() { imgData = null; document.getElementById('imgInput').value = ''; render(); }
+
+        function addSize(sHtml='', q='', rHtml='') {
+            const div = document.createElement('div'); div.className = 'size-item';
+            div.innerHTML = `
+                <div class="size-row-top">
+                    <i class="fas fa-grip-vertical handle" title="按住拖曳"></i>
+                    
+                    <div class="inp-s rich-input" contenteditable="true" data-placeholder="尺碼" oninput="render()">${sHtml}</div>
+                    <input class="inp-q" type="number" value="${q}" placeholder="數量" oninput="render()">
+                    
+                    <div style="flex:1"></div> 
+                    <div class="color-circle" style="width:26px; height:26px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:none;" title="選色">
+                        <input type="color" onchange="applyFormatToSelection('foreColor', this.value)">
+                    </div>
+                    <button class="btn-mini btn-mini-bold" onmousedown="event.preventDefault(); applyFormatToSelection('bold')" title="加粗">B</button>
+                    <button class="btn-mini btn-mini-del" onclick="this.closest('.size-item').remove(); render()" title="刪除此列">×</button>
+                </div>
+                <div class="inp-r rich-input" contenteditable="true" data-placeholder="備註內容 (反白文字或點入框內，按右上角改色/加粗)..." oninput="render()">${rHtml}</div>
+            `;
+            document.getElementById('sizeList').appendChild(div);
+            render();
+        }
+
+        function render() {
+            const getVal = id => document.getElementById(id).value;
+            const getChk = id => document.getElementById(id).checked;
+            const styles = {
+                title: { color: getVal('cTitle'), bold: getChk('bTitle') }, header: { color: getVal('cHeader'), bold: getChk('bHeader') },
+                detail: { color: getVal('cDetail'), bold: getChk('bDetail') }, footer: { color: getVal('cFooter'), bold: getChk('bFooter') }
+            };
+            const data = {
+                title: getVal('vTitle') || ' ', unit: getVal('vUnit') || ' ', vendor: getVal('vVendor') || ' ',
+                style: getVal('vStyle') || ' ', color: getVal('vColor') || ' ', detail: getVal('vDetail') || ' ', date: getVal('vDate'),
+                footer: getVal('vFooter') || ' ', rows: []
+            };
+
+            let total = 0;
+            document.querySelectorAll('.size-item').forEach(row => {
+                const s = row.querySelector('.inp-s').innerHTML;
+                const q = row.querySelector('.inp-q').value;
+                const r = row.querySelector('.inp-r').innerHTML;
+                const sText = row.querySelector('.inp-s').textContent.trim();
+                const rText = row.querySelector('.inp-r').textContent.trim();
+                
+                if (sText || q || rText || s.includes('<img') || r.includes('<img')) { 
+                    data.rows.push({ s, q, r }); 
+                    if (q && !isNaN(q)) total += parseInt(q); 
+                }
+            });
+
+            const area = document.getElementById('previewArea'); area.innerHTML = ''; 
+            let pages = []; let remainingRows = [...data.rows];
+            pages.push({ type: 'first', rows: remainingRows.splice(0, ROWS_PAGE1) });
+            while(remainingRows.length > 0) pages.push({ type: 'other', rows: remainingRows.splice(0, ROWS_PAGE_N) });
+
+            const badgeText = document.getElementById('pageBadgeText');
+            if (badgeText) badgeText.textContent = `共 ${pages.length} 頁`;
+
+            pages.forEach((page, idx) => {
+                const sheet = document.createElement('div'); sheet.className = 'sheet';
+                let html = '';
+                if (page.type === 'first' && logoData) html += `<div class="logo-area"><img src="${logoData}"></div>`;
+                const titleText = page.type === 'first' ? data.title : `${data.title} (續頁)`;
+                html += `<div class="sheet-header"><h1 class="sheet-title" style="color:${styles.title.color}; font-weight:${styles.title.bold?'bold':'normal'}">${titleText}</h1></div>`;
+                
+                if (page.type === 'first') {
+                    const hStyle = `color:${styles.header.color}; font-weight:${styles.header.bold?'bold':'normal'}`;
+                    html += `<div class="info-grid">
+                        <div class="grid-cell cell-label">單位</div><div class="grid-cell" style="${hStyle}">${data.unit}</div>
+                        <div class="grid-cell cell-label">廠商</div><div class="grid-cell" style="${hStyle}">${data.vendor}</div>
+                        <div class="grid-cell cell-label">衣版</div><div class="grid-cell" style="${hStyle}">${data.style}</div>
+                        <div class="grid-cell cell-label">顏色</div><div class="grid-cell" style="${hStyle}">${data.color}</div>
+                    </div><div style="font-weight:bold; margin-bottom:5px;">示意圖/圖稿：</div>
+                    <div class="img-area">${imgData ? `<img src="${imgData}">` : `<span style="color:#ccc; font-size:24px; font-weight:bold; letter-spacing:2px;">圖稿預覽</span>`}</div>`;
+                    const dStyle = `color:${styles.detail.color}; font-weight:${styles.detail.bold?'bold':'normal'}`;
+                    html += `<div style="font-weight:bold; margin-bottom:5px;">製作說明：</div>
+                    <div class="detail-area"><div class="detail-text" style="${dStyle}">${data.detail}</div>
+                        <div class="date-area"><span style="font-weight:bold; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:10px;">希望交期</span><span style="font-size:16pt; font-weight:bold;">${data.date}</span></div>
+                    </div>`;
+                } else {
+                    html += `<div style="margin-bottom:10px; font-size:14px; color:#666;">款式：${data.style} / 顏色：${data.color}</div>`;
+                    if(imgData) html += `<div class="img-area-small"><img src="${imgData}"></div>`;
+                }
+
+                html += `<table class="order-table"><thead><tr><th width="15%">尺寸</th><th width="15%">數量</th><th width="5%"></th><th>備註 / 確認</th></tr></thead><tbody>`;
+                const rowsToShow = (page.rows.length === 0 && page.type === 'first') ? [{s:'',q:'',r:''}] : page.rows;
+                rowsToShow.forEach(r => { html += `<tr><td>${r.s}</td><td>${r.q}</td><td></td><td>${r.r}</td></tr>`; });
+                if (idx === pages.length - 1) {
+                    const fStyle = `color:${styles.footer.color}; font-weight:${styles.footer.bold?'bold':'normal'}`;
+                    html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
+                }
+                html += `</tbody></table><div class="page-num">Page ${idx+1} / ${pages.length}</div>`;
+                sheet.innerHTML = html; area.appendChild(sheet);
+            });
+        }
+
+        async function saveProject() {
+            const rows = [];
+            document.querySelectorAll('.size-item').forEach(r => {
+                rows.push({
+                    s: r.querySelector('.inp-s').innerHTML,
+                    q: r.querySelector('.inp-q').value,
+                    r: r.querySelector('.inp-r').innerHTML
+                });
+            });
+            const data = {
+                title: document.getElementById('vTitle').value, cTitle: document.getElementById('cTitle').value, bTitle: document.getElementById('bTitle').checked,
+                unit: document.getElementById('vUnit').value, vendor: document.getElementById('vVendor').value, cHeader: document.getElementById('cHeader').value, bHeader: document.getElementById('bHeader').checked,
+                style: document.getElementById('vStyle').value, color: document.getElementById('vColor').value,
+                img: imgData, logo: logoData, 
+                detail: document.getElementById('vDetail').value, cDetail: document.getElementById('cDetail').value, bDetail: document.getElementById('bDetail').checked,
+                date: document.getElementById('vDate').value,
+                footer: document.getElementById('vFooter').value, cFooter: document.getElementById('cFooter').value, bFooter: document.getElementById('bFooter').checked,
+                rows: rows
+            };
+            const fName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '未命名'}.json`;
+            const jsonStr = JSON.stringify(data);
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({ suggestedName: fName, types: [{ description: 'JSON File', accept: {'application/json': ['.json']} }] });
+                    const writable = await handle.createWritable(); await writable.write(jsonStr); await writable.close();
+                } else { saveAs(new Blob([jsonStr], {type: "application/json;charset=utf-8"}), fName); }
+            } catch (err) { if (err.name !== 'AbortError') alert("存檔失敗：" + err.message); }
+        }
+
+        function loadProject(input) {
+            if(!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    document.getElementById('vTitle').value = data.title || ''; document.getElementById('cTitle').value = data.cTitle || '#000000'; document.getElementById('bTitle').checked = data.bTitle; toggleChk('bTitle');
+                    document.getElementById('vUnit').value = data.unit || ''; document.getElementById('vVendor').value = data.vendor || ''; document.getElementById('cHeader').value = data.cHeader || '#000000'; document.getElementById('bHeader').checked = data.bHeader; toggleChk('bHeader');
+                    document.getElementById('vStyle').value = data.style || ''; document.getElementById('vColor').value = data.color || ''; imgData = data.img; logoData = data.logo; 
+                    document.getElementById('vDetail').value = data.detail || ''; document.getElementById('cDetail').value = data.cDetail || '#000000'; document.getElementById('bDetail').checked = data.bDetail; toggleChk('bDetail');
+                    document.getElementById('vDate').value = data.date || ''; document.getElementById('vFooter').value = data.footer || ''; document.getElementById('cFooter').value = data.cFooter || '#ff0000'; document.getElementById('bFooter').checked = data.bFooter; toggleChk('bFooter');
+
+                    document.getElementById('sizeList').innerHTML = '';
+                    if(data.rows && data.rows.length > 0) { 
+                        data.rows.forEach(r => {
+                            let rHtml = r.r; let sHtml = r.s || '';
+                            if(r.b || (r.c && r.c !== '#000000')) {
+                                let style = [];
+                                if(r.b) style.push('font-weight:bold');
+                                if(r.c && r.c !== '#000000') style.push(`color:${r.c}`);
+                                rHtml = `<span style="${style.join(';')}">${rHtml}</span>`;
+                            }
+                            addSize(sHtml, r.q, rHtml);
+                        }); 
+                    } else { addSize(); }
+                    render();
+                } catch(e) { alert('格式錯誤'); }
+                input.value = '';
+            };
+            reader.readAsText(input.files[0]);
+        }
+
+        async function exportToPdf() {
+            const sheets = document.querySelectorAll('.sheet'); if(sheets.length === 0) return;
+            const defaultFileName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
+            const inputFileName = prompt("請輸入 PDF 檔案名稱：", defaultFileName);
+            if (inputFileName === null || inputFileName.trim() === "") return; 
+            showLoading(true, `PDF 產出中 (共 ${sheets.length} 頁)，請稍候...`);
+            try {
+                const { jsPDF } = window.jspdf; const doc = new jsPDF('p', 'mm', 'a4');
+                for(let i=0; i<sheets.length; i++) {
+                    if(i > 0) doc.addPage();
+                    // 逐頁取得該頁自身的實際尺寸，確保每頁都是完整、未被壓縮的A4比例
+                    const w = sheets[i].offsetWidth, h = sheets[i].offsetHeight;
+                    const canvas = await html2canvas(sheets[i], { scale: 3, useCORS: true, width: w, height: h, windowWidth: w, windowHeight: h });
+                    doc.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
+                }
+                doc.save(`${inputFileName.trim()}.pdf`);
+            } catch(e) { alert("PDF 產出失敗。"); } finally { showLoading(false); }
+        }
+
+        async function exportToJpeg() {
+            const sheets = document.querySelectorAll('.sheet'); if(sheets.length === 0) return;
+            showLoading(true, `圖片產出中 (共 ${sheets.length} 張)，請稍候...`);
+            try {
+                const baseName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
+                for(let i=0; i<sheets.length; i++) {
+                    const targetWidth = sheets[i].offsetWidth, targetHeight = sheets[i].offsetHeight;
+                    const canvas = await html2canvas(sheets[i], { scale: 2, useCORS: true, width: targetWidth, height: targetHeight, windowWidth: targetWidth, windowHeight: targetHeight });
+                    const link = document.createElement('a'); link.download = `${baseName}_P${i+1}.jpg`; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
+                }
+            } catch(e) { alert("圖片產出失敗"); } finally { showLoading(false); }
+        }
+
+        function htmlToExcelRichText(htmlString) {
+            if (!htmlString) return '';
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = htmlString;
+            const richTextArray = [];
+
+            function parseNode(node, currentFont) {
+                if (node.nodeType === 3) { 
+                    if (node.textContent) richTextArray.push({ text: node.textContent, font: { ...currentFont } });
+                } else if (node.nodeType === 1) { 
+                    const font = { ...currentFont };
+                    
+                    if (node.tagName === 'B' || node.tagName === 'STRONG' || node.style.fontWeight === 'bold' || parseInt(node.style.fontWeight) >= 600) {
+                        font.bold = true;
+                    }
+                    if (node.tagName === 'FONT' && node.color) {
+                        font.color = { argb: 'FF' + node.color.replace('#', '').toUpperCase() };
+                    }
+                    if (node.style.color) {
+                        let match = node.style.color.match(/\d+/g);
+                        if (match && match.length >= 3) {
+                            const hex = match.slice(0, 3).map(x => parseInt(x).toString(16).padStart(2, '0')).join('').toUpperCase();
+                            font.color = { argb: 'FF' + hex };
+                        }
+                    }
+
+                    if (node.tagName === 'DIV' || node.tagName === 'P') {
+                        if (richTextArray.length > 0 && richTextArray[richTextArray.length-1].text !== '\n') {
+                            richTextArray.push({ text: '\n', font: { ...currentFont } });
+                        }
+                    }
+                    if (node.tagName === 'BR') {
+                        richTextArray.push({ text: '\n', font: { ...currentFont } });
+                    }
+
+                    node.childNodes.forEach(child => parseNode(child, font));
+                }
+            }
+            parseNode(wrapper, {});
+            return richTextArray.length > 0 ? { richText: richTextArray } : '';
+        }
+
+        async function exportToExcel() {
+            const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('製單');
+            ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
+            ws.columns = [{width:15}, {width:15}, {width:3}, {width:30}, {width:30}];
+
+            const getS = (idC, idB) => ({ argb: document.getElementById(idC).value.replace('#','FF'), bold: document.getElementById(idB).checked });
+            const sTitle = getS('cTitle', 'bTitle'); const sHead = getS('cHeader', 'bHeader'); const sDet = getS('cDetail', 'bDetail'); const sFoot = getS('cFooter', 'bFooter');
+
+            let cur = 1; 
+            if (logoData) {
+                const logoId = wb.addImage({ base64: logoData, extension: 'png' });
+                const tmp = new Image(); tmp.src = logoData; await new Promise(r => tmp.onload = r);
+                const ratio = tmp.naturalWidth / tmp.naturalHeight;
+                ws.addImage(logoId, { tl: { col: 2.2, row: 0.2 }, ext: { width: 60 * ratio, height: 60 }, editAs: 'oneCell' });
+                ws.addRow([]); ws.addRow([]); ws.addRow([]); cur = 4;
+            }
+
+            const r1 = ws.addRow([document.getElementById('vTitle').value]); ws.mergeCells(`A${cur}:E${cur}`); r1.height = 35;
+            r1.font = { size: 20, bold: sTitle.bold, color: { argb: sTitle.argb } }; r1.alignment = { horizontal: 'center', vertical: 'middle' }; cur++;
+
+            [['單位:', document.getElementById('vUnit').value, '廠商:', document.getElementById('vVendor').value], ['衣版:', document.getElementById('vStyle').value, '顏色:', document.getElementById('vColor').value]].forEach(v => {
+                const r = ws.addRow([v[0], v[1], '', v[2], v[3]]); ws.mergeCells(`B${r.number}:C${r.number}`); r.height = 24;
+                [1, 4].forEach(c => { r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }; r.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' }; r.getCell(c).font = { bold: true }; });
+                [2, 5].forEach(c => { r.getCell(c).font = { color: { argb: sHead.argb }, bold: sHead.bold }; r.getCell(c).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; });
+                cur++;
+            });
+
+            ws.addRow(['示意圖/圖稿：']).font = { bold: true }; ws.mergeCells(`A${cur}:E${cur}`); cur++;
+            const iStart = cur; for(let i=0; i<15; i++) { ws.addRow(['']); cur++; } ws.mergeCells(`A${iStart}:E${cur-1}`);
+            if(imgData) ws.addImage(wb.addImage({ base64: imgData, extension: 'png' }), { tl: { col: 0.1, row: iStart - 1 + 0.1 }, ext: { width: 550, height: 350 }, editAs: 'oneCell' });
+
+            const detText = document.getElementById('vDetail').value;
+            ws.addRow(['製作細節:', '', '', '希望交期:', document.getElementById('vDate').value]); cur++;
+            const rDet = ws.addRow([detText]); rDet.height = Math.max(60, (detText.split('\n').length + Math.ceil(detText.length / 40)) * 18);
+            ws.addRow([]); cur += 2; 
+            ws.mergeCells(`A${cur-2}:C${cur}`); ws.mergeCells(`D${cur-3}:D${cur}`); ws.mergeCells(`E${cur-3}:E${cur}`);
+            ws.getCell(`A${cur-2}`).font = { color: { argb: sDet.argb }, bold: sDet.bold }; ws.getCell(`A${cur-2}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+            ws.getCell(`D${cur-3}`).alignment = { horizontal: 'right', vertical: 'top', font:{bold:true} }; ws.getCell(`E${cur-3}`).alignment = { horizontal: 'center', vertical: 'top', size: 14, font:{bold:true} };
+
+            const hRow = ws.addRow(['尺寸', '數量', '', '備註', '']); ws.mergeCells(`D${cur+1}:E${cur+1}`); hRow.height = 28; hRow.font = { bold: true };
+            hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; c.alignment = { horizontal: 'center', vertical: 'middle' }; }); cur++;
+
+            let total = 0;
+            document.querySelectorAll('.size-item').forEach(rItem => {
+                const sHtml = rItem.querySelector('.inp-s').innerHTML, q = rItem.querySelector('.inp-q').value, rHtml = rItem.querySelector('.inp-r').innerHTML;
+                const sText = rItem.querySelector('.inp-s').textContent, rText = rItem.querySelector('.inp-r').textContent;
+                
+                if(sText.trim() || q || rText.trim() || sHtml.includes('<img') || rHtml.includes('<img')) {
+                    const row = ws.addRow(['', parseInt(q)||'', '', '', '']); ws.mergeCells(`D${cur+1}:E${cur+1}`);
+                    row.height = Math.max(24, Math.ceil(rText.length / 20) * 18);
+                    
+                    row.getCell(1).value = htmlToExcelRichText(sHtml);
+                    row.getCell(4).value = htmlToExcelRichText(rHtml);
+
+                    row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                    row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+                    row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+                    if(q && !isNaN(q)) total += parseInt(q); cur++;
+                }
+            });
+
+            const fRow = ws.addRow(['總計', total, '', document.getElementById('vFooter').value, '']); ws.mergeCells(`D${cur+1}:E${cur+1}`); fRow.height = 30; fRow.font = { bold: true };
+            fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; fRow.getCell(4).font = { color: { argb: sFoot.argb }, bold: sFoot.bold }; fRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; cur++;
+
+            ws.eachRow((row, rn) => { if(rn >= (logoData ? 4 : 1)) row.eachCell({ includeEmpty: true }, (cell, cn) => { if (cn <= 5) cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; }); });
+            ws.pageSetup.printArea = `A1:E${cur}`;
+            saveAs(new Blob([await wb.xlsx.writeBuffer()]), `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '未命名'}.xlsx`);
+        }
+    </script>
+</body>
+</html>
