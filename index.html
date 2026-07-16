@@ -255,6 +255,7 @@
 
         @media (max-width: 900px) {
             .mobile-toggle-btn { display: flex; }
+            body.sidebar-open .mobile-toggle-btn { display: none; }
             body { overflow: hidden; }
             .sidebar {
                 position: fixed; top: 0; left: 0; height: 100%;
@@ -461,10 +462,12 @@
         function toggleSidebar() {
             document.getElementById('sidebarPanel').classList.toggle('open');
             document.getElementById('sidebarBackdrop').classList.toggle('show');
+            document.body.classList.toggle('sidebar-open');
         }
         function closeSidebar() {
             document.getElementById('sidebarPanel').classList.remove('open');
             document.getElementById('sidebarBackdrop').classList.remove('show');
+            document.body.classList.remove('sidebar-open');
         }
 
         // --- 手機版：依可視寬度計算A4預覽的縮放比例(僅視覺縮放，不影響匯出的實際像素尺寸) ---
