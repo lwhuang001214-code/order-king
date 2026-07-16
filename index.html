@@ -234,6 +234,46 @@
             display: flex; align-items: center; gap: 7px; pointer-events: none;
         }
         .page-badge i { color: #9ba3ff; }
+
+        /* --- 手機版容器：讓A4預覽可依螢幕寬度自動等比縮小，不影響匯出實際尺寸 --- */
+        .sheet-wrap { position: relative; margin: 0 auto 20px; }
+
+        /* --- 手機漢堡選單與遮罩(預設隱藏，僅窄螢幕顯示) --- */
+        .mobile-toggle-btn {
+            display: none; position: fixed; top: 14px; left: 14px; z-index: 150;
+            width: 46px; height: 46px; border-radius: 13px; border: none; cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            color: #fff; align-items: center; justify-content: center; font-size: 19px;
+            box-shadow: 0 8px 20px rgba(91,94,244,0.45);
+        }
+        .mobile-toggle-btn:active { transform: scale(0.94); }
+        .sidebar-backdrop { display: none; }
+        .sidebar-backdrop.show {
+            display: block; position: fixed; inset: 0; z-index: 140;
+            background: rgba(15,17,30,0.5); backdrop-filter: blur(2px);
+        }
+
+        @media (max-width: 900px) {
+            .mobile-toggle-btn { display: flex; }
+            body { overflow: hidden; }
+            .sidebar {
+                position: fixed; top: 0; left: 0; height: 100%;
+                width: min(86vw, 380px); min-width: 0;
+                transform: translateX(-100%);
+                transition: transform 0.32s cubic-bezier(.2,.9,.3,1);
+                z-index: 145;
+            }
+            .sidebar.open { transform: translateX(0); box-shadow: 25px 0 60px rgba(0,0,0,0.35); }
+            .preview-container { width: 100%; padding: 64px 12px 30px; }
+            .page-badge { top: 14px; right: 14px; padding: 7px 14px; font-size: 12px; }
+            .sheet-wrap {
+                width: calc(var(--mobile-scale, 1) * 210mm);
+                height: calc(var(--mobile-scale, 1) * 297mm);
+                overflow: hidden; margin-bottom: 16px;
+            }
+            .sheet-wrap .sheet { transform: scale(var(--mobile-scale, 1)); transform-origin: top left; margin-bottom: 0; }
+            .action-bar { padding: 14px; }
+        }
         
         .sheet {
             /* 關鍵修正：flex-shrink:0 讓A4紙張在任何內容量下都維持真實尺寸，
@@ -284,7 +324,8 @@
             body { background: white; display: block; overflow: visible; height: auto; }
             .sidebar { display: none !important; }
             .preview-container { padding: 0; margin: 0; background: white; display: block; overflow: visible; height: auto; }
-            .sheet { flex-shrink: 0; margin: 0; box-shadow: none; width: 100%; height: 297mm; max-height: 297mm; page-break-after: always; border: none; overflow: hidden; }
+            .sheet { flex-shrink: 0; margin: 0; box-shadow: none; width: 100%; height: 297mm; max-height: 297mm; page-break-after: always; border: none; overflow: hidden; transform: none !important; }
+            .sheet-wrap { width: auto !important; height: auto !important; overflow: visible !important; margin: 0 !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
@@ -293,10 +334,31 @@
 
     <div id="loadingOverlay"><div class="loading-card"><i class="fas fa-spinner fa-spin"></i><span>處理中，請稍候...</span></div></div>
 
-    <div class="sidebar">
+    <button class="mobile-toggle-btn" id="mobileToggleBtn" onclick="toggleSidebar()" title="開啟選單"><i class="fas fa-bars"></i></button>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+    <div class="sidebar" id="sidebarPanel">
         <div class="sidebar-header">
             <div class="app-icon-display">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20,30 L30,10 L70,10 L80,30 L90,25 L95,35 L80,60 L80,95 L20,95 L20,60 L5,35 L10,25 Z" fill="#5b5ef4" stroke="#3a3dc4" stroke-width="2"/><path d="M35,55 L40,40 L50,48 L60,40 L65,55 Z" fill="#ff5da2" stroke="#fff" stroke-width="1"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 43.51 43.51" style="width:32px;height:32px;">
+                    <defs>
+                        <style>
+                            .logo-st0 { fill: #fff; }
+                            .logo-st1 { fill: #7f6aa3; }
+                            .logo-st2 { fill: url(#logo-gradient-28); }
+                        </style>
+                        <linearGradient id="logo-gradient-28" x1="21.76" y1="41.51" x2="21.76" y2="2" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#614db8"/>
+                            <stop offset="1" stop-color="#6e71f0"/>
+                        </linearGradient>
+                    </defs>
+                    <rect class="logo-st1" width="43.51" height="43.51" rx="10.4" ry="10.4" transform="translate(0 43.51) rotate(-90)"/>
+                    <rect class="logo-st2" x="2" y="2" width="39.51" height="39.51" rx="8.4" ry="8.4"/>
+                    <g>
+                        <path class="logo-st0" d="M32.21,20.67c-1.03.55-2.15,1.06-3.22,1.49,1.22.41,2.66.7,4.35.88-.66.53-1.49,1.57-1.91,2.23-5.01-.74-7.89-2.47-9.73-5.46-.88.57-1.91,1.06-3.03,1.47v1.47l3.89-.63c-.15.63-.24,1.6-.24,2.11-5.47.98-6.38,1.17-6.92,1.45l-.02-.25c-.22-.57-.68-1.35-1-1.66.41-.25.95-.7,1.1-1.53-1.1.25-2.27.45-3.45.61-.39-.59-1.22-1.51-1.86-2.02,2.37-.21,4.69-.61,6.6-1.17h-6.18v-2.21h9.68c-.12-.27-.24-.55-.39-.78h-.68c-.15-.53-.54-1.15-.81-1.59.41.02.95.02,1.12.02.19,0,.27-.04.27-.2v-.49h-1.39v2.72h-3.01v-2.72h-1.37v2.31h-2.64v-3.97h4.01v-.49h-4.81v-1.86h1.42c-.54-.27-1.22-.57-1.64-.74.81-.7,1.49-1.74,1.88-2.72l2.56.51c-.1.21-.19.45-.32.66h.9v-1.19h3.01v1.19h3.86v1.76h-3.86v.53h4.4v1.86h-4.4v.49h4.2v2.13c0,.53-.07.88-.29,1.14l.85-.2c.34.47.68,1.08.93,1.63h8.75v2.21h-2.32l1.71,1.02ZM15.38,10.39v-.53h-2.03c-.15.2-.29.37-.44.53h2.47ZM27.08,14.39h-3.15v-6.52h3.15v6.52ZM24.96,19.65c.39.47.88.88,1.44,1.25.85-.37,1.76-.82,2.52-1.25h-3.96ZM31.97,14.72c0,1.15-.27,1.72-1.25,2.07-.98.35-2.22.37-3.91.37-.15-.67-.61-1.6-1-2.21.95.04,2.15.04,2.49.02.34,0,.47-.08.47-.31v-7.61h3.2v7.67Z"/>
+                        <path class="logo-st0" d="M18.94,35.44h-3.71v1.16h-1.47v-1.16h-3.59v-1.21h3.59v-.37h-2.71v-3.82h7.06v3.82h-2.88v.37h3.71v1.21ZM14.32,29.73h-3.66v-2h3.66v2ZM13,28.55h-1.09v.36h1.09v-.36ZM12.44,31.46h1.32v-.34h-1.32v.34ZM13.77,32.79v-.34h-1.32v.34h1.32ZM18.48,29.73h-3.69v-2h3.69v2ZM16.66,31.12h-1.42v.34h1.42v-.34ZM16.66,32.45h-1.42v.34h1.42v-.34ZM17.15,28.55h-1.12v.36h1.12v-.36Z"/>
+                        <path class="logo-st0" d="M33.34,34.59v1.39h-8.95v-1.39h3.7v-2.19h-2.76v-1.39h2.76v-1.91h-3.23v-1.39h7.98v1.39h-3.25v1.91h2.85v1.39h-2.85v2.19h3.75Z"/>
+                    </g>
+                </svg>
             </div>
             <div>
                 <h2>製單王</h2>
@@ -380,6 +442,27 @@
         const ROWS_PAGE1 = 7; 
         const ROWS_PAGE_N = 20; 
         let imgData = null; let logoData = null; 
+
+        // --- 手機版：側邊欄抽屜開關 ---
+        function toggleSidebar() {
+            document.getElementById('sidebarPanel').classList.toggle('open');
+            document.getElementById('sidebarBackdrop').classList.toggle('show');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebarPanel').classList.remove('open');
+            document.getElementById('sidebarBackdrop').classList.remove('show');
+        }
+
+        // --- 手機版：依可視寬度計算A4預覽的縮放比例(僅視覺縮放，不影響匯出的實際像素尺寸) ---
+        function updateMobileScale() {
+            if (window.innerWidth > 900) { document.documentElement.style.setProperty('--mobile-scale', 1); return; }
+            const container = document.getElementById('previewArea');
+            if (!container) return;
+            const availableWidth = container.clientWidth - 24;
+            const scale = Math.max(0.25, Math.min(1, availableWidth / 794));
+            document.documentElement.style.setProperty('--mobile-scale', scale);
+        }
+        window.addEventListener('resize', updateMobileScale);
 
         // --- 全域反白範圍捕捉 (Rich Text Editor 核心) ---
         let lastSelectionRange = null;
@@ -536,8 +619,12 @@
                     html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
                 }
                 html += `</tbody></table><div class="page-num">Page ${idx+1} / ${pages.length}</div>`;
-                sheet.innerHTML = html; area.appendChild(sheet);
+                sheet.innerHTML = html;
+                const wrap = document.createElement('div'); wrap.className = 'sheet-wrap';
+                wrap.appendChild(sheet); area.appendChild(wrap);
             });
+
+            updateMobileScale();
         }
 
         async function saveProject() {
@@ -611,9 +698,12 @@
                 const { jsPDF } = window.jspdf; const doc = new jsPDF('p', 'mm', 'a4');
                 for(let i=0; i<sheets.length; i++) {
                     if(i > 0) doc.addPage();
-                    // 逐頁取得該頁自身的實際尺寸，確保每頁都是完整、未被壓縮的A4比例
+                    // 手機版畫面可能套用了縮放預覽用的transform，擷取前先暫時還原成原始尺寸，確保匯出品質不受影響
+                    const prevTransform = sheets[i].style.transform;
+                    sheets[i].style.transform = 'none';
                     const w = sheets[i].offsetWidth, h = sheets[i].offsetHeight;
                     const canvas = await html2canvas(sheets[i], { scale: 3, useCORS: true, width: w, height: h, windowWidth: w, windowHeight: h });
+                    sheets[i].style.transform = prevTransform;
                     doc.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight());
                 }
                 doc.save(`${inputFileName.trim()}.pdf`);
@@ -626,8 +716,11 @@
             try {
                 const baseName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
                 for(let i=0; i<sheets.length; i++) {
+                    const prevTransform = sheets[i].style.transform;
+                    sheets[i].style.transform = 'none';
                     const targetWidth = sheets[i].offsetWidth, targetHeight = sheets[i].offsetHeight;
                     const canvas = await html2canvas(sheets[i], { scale: 2, useCORS: true, width: targetWidth, height: targetHeight, windowWidth: targetWidth, windowHeight: targetHeight });
+                    sheets[i].style.transform = prevTransform;
                     const link = document.createElement('a'); link.download = `${baseName}_P${i+1}.jpg`; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
                 }
             } catch(e) { alert("圖片產出失敗"); } finally { showLoading(false); }
@@ -675,6 +768,24 @@
             return richTextArray.length > 0 ? { richText: richTextArray } : '';
         }
 
+        // 將任意圖片來源(PNG/JPG/SVG皆可)重新繪製為真正的PNG點陣圖，
+        // 避免「宣告格式與實際內容不符」導致Excel開啟時判定檔案損毀、格式跑掉
+        function toPngDataUrl(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 1;
+                    canvas.height = img.naturalHeight || img.height || 1;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve({ dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
+                };
+                img.onerror = () => reject(new Error('圖片讀取失敗'));
+                img.src = dataUrl;
+            });
+        }
+
         async function exportToExcel() {
             const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('製單');
             ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
@@ -683,39 +794,41 @@
             const getS = (idC, idB) => ({ argb: document.getElementById(idC).value.replace('#','FF'), bold: document.getElementById(idB).checked });
             const sTitle = getS('cTitle', 'bTitle'); const sHead = getS('cHeader', 'bHeader'); const sDet = getS('cDetail', 'bDetail'); const sFoot = getS('cFooter', 'bFooter');
 
-            let cur = 1; 
             if (logoData) {
-                const logoId = wb.addImage({ base64: logoData, extension: 'png' });
-                const tmp = new Image(); tmp.src = logoData; await new Promise(r => tmp.onload = r);
-                const ratio = tmp.naturalWidth / tmp.naturalHeight;
+                const logoPng = await toPngDataUrl(logoData);
+                const logoId = wb.addImage({ base64: logoPng.dataUrl, extension: 'png' });
+                const ratio = logoPng.width / logoPng.height;
                 ws.addImage(logoId, { tl: { col: 2.2, row: 0.2 }, ext: { width: 60 * ratio, height: 60 }, editAs: 'oneCell' });
-                ws.addRow([]); ws.addRow([]); ws.addRow([]); cur = 4;
+                ws.addRow([]); ws.addRow([]); ws.addRow([]);
             }
 
-            const r1 = ws.addRow([document.getElementById('vTitle').value]); ws.mergeCells(`A${cur}:E${cur}`); r1.height = 35;
-            r1.font = { size: 20, bold: sTitle.bold, color: { argb: sTitle.argb } }; r1.alignment = { horizontal: 'center', vertical: 'middle' }; cur++;
+            const r1 = ws.addRow([document.getElementById('vTitle').value]); ws.mergeCells(`A${r1.number}:E${r1.number}`); r1.height = 35;
+            r1.font = { size: 20, bold: sTitle.bold, color: { argb: sTitle.argb } }; r1.alignment = { horizontal: 'center', vertical: 'middle' };
 
             [['單位:', document.getElementById('vUnit').value, '廠商:', document.getElementById('vVendor').value], ['衣版:', document.getElementById('vStyle').value, '顏色:', document.getElementById('vColor').value]].forEach(v => {
                 const r = ws.addRow([v[0], v[1], '', v[2], v[3]]); ws.mergeCells(`B${r.number}:C${r.number}`); r.height = 24;
                 [1, 4].forEach(c => { r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }; r.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' }; r.getCell(c).font = { bold: true }; });
                 [2, 5].forEach(c => { r.getCell(c).font = { color: { argb: sHead.argb }, bold: sHead.bold }; r.getCell(c).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; });
-                cur++;
             });
 
-            ws.addRow(['示意圖/圖稿：']).font = { bold: true }; ws.mergeCells(`A${cur}:E${cur}`); cur++;
-            const iStart = cur; for(let i=0; i<15; i++) { ws.addRow(['']); cur++; } ws.mergeCells(`A${iStart}:E${cur-1}`);
-            if(imgData) ws.addImage(wb.addImage({ base64: imgData, extension: 'png' }), { tl: { col: 0.1, row: iStart - 1 + 0.1 }, ext: { width: 550, height: 350 }, editAs: 'oneCell' });
+            const imgLabelRow = ws.addRow(['示意圖/圖稿：']); imgLabelRow.font = { bold: true }; ws.mergeCells(`A${imgLabelRow.number}:E${imgLabelRow.number}`);
+            const iStart = imgLabelRow.number + 1; for(let i=0; i<15; i++) ws.addRow(['']);
+            const iEnd = ws.rowCount; ws.mergeCells(`A${iStart}:E${iEnd}`);
+            if(imgData) {
+                const mainPng = await toPngDataUrl(imgData);
+                ws.addImage(wb.addImage({ base64: mainPng.dataUrl, extension: 'png' }), { tl: { col: 0.1, row: iStart - 1 + 0.1 }, ext: { width: 550, height: 350 }, editAs: 'oneCell' });
+            }
 
             const detText = document.getElementById('vDetail').value;
-            ws.addRow(['製作細節:', '', '', '希望交期:', document.getElementById('vDate').value]); cur++;
+            const detLabelRow = ws.addRow(['製作細節:', '', '', '希望交期:', document.getElementById('vDate').value]);
             const rDet = ws.addRow([detText]); rDet.height = Math.max(60, (detText.split('\n').length + Math.ceil(detText.length / 40)) * 18);
-            ws.addRow([]); cur += 2; 
-            ws.mergeCells(`A${cur-2}:C${cur}`); ws.mergeCells(`D${cur-3}:D${cur}`); ws.mergeCells(`E${cur-3}:E${cur}`);
-            ws.getCell(`A${cur-2}`).font = { color: { argb: sDet.argb }, bold: sDet.bold }; ws.getCell(`A${cur-2}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-            ws.getCell(`D${cur-3}`).alignment = { horizontal: 'right', vertical: 'top', font:{bold:true} }; ws.getCell(`E${cur-3}`).alignment = { horizontal: 'center', vertical: 'top', size: 14, font:{bold:true} };
+            const spacerRow = ws.addRow([]);
+            ws.mergeCells(`A${rDet.number}:C${spacerRow.number}`); ws.mergeCells(`D${detLabelRow.number}:D${spacerRow.number}`); ws.mergeCells(`E${detLabelRow.number}:E${spacerRow.number}`);
+            ws.getCell(`A${rDet.number}`).font = { color: { argb: sDet.argb }, bold: sDet.bold }; ws.getCell(`A${rDet.number}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+            ws.getCell(`D${detLabelRow.number}`).alignment = { horizontal: 'right', vertical: 'top', font:{bold:true} }; ws.getCell(`E${detLabelRow.number}`).alignment = { horizontal: 'center', vertical: 'top', size: 14, font:{bold:true} };
 
-            const hRow = ws.addRow(['尺寸', '數量', '', '備註', '']); ws.mergeCells(`D${cur+1}:E${cur+1}`); hRow.height = 28; hRow.font = { bold: true };
-            hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; c.alignment = { horizontal: 'center', vertical: 'middle' }; }); cur++;
+            const hRow = ws.addRow(['尺寸', '數量', '', '備註', '']); ws.mergeCells(`D${hRow.number}:E${hRow.number}`); hRow.height = 28; hRow.font = { bold: true };
+            hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
 
             let total = 0;
             document.querySelectorAll('.size-item').forEach(rItem => {
@@ -723,7 +836,7 @@
                 const sText = rItem.querySelector('.inp-s').textContent, rText = rItem.querySelector('.inp-r').textContent;
                 
                 if(sText.trim() || q || rText.trim() || sHtml.includes('<img') || rHtml.includes('<img')) {
-                    const row = ws.addRow(['', parseInt(q)||'', '', '', '']); ws.mergeCells(`D${cur+1}:E${cur+1}`);
+                    const row = ws.addRow(['', parseInt(q)||'', '', '', '']); ws.mergeCells(`D${row.number}:E${row.number}`);
                     row.height = Math.max(24, Math.ceil(rText.length / 20) * 18);
                     
                     row.getCell(1).value = htmlToExcelRichText(sHtml);
@@ -733,15 +846,15 @@
                     row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
                     row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
-                    if(q && !isNaN(q)) total += parseInt(q); cur++;
+                    if(q && !isNaN(q)) total += parseInt(q);
                 }
             });
 
-            const fRow = ws.addRow(['總計', total, '', document.getElementById('vFooter').value, '']); ws.mergeCells(`D${cur+1}:E${cur+1}`); fRow.height = 30; fRow.font = { bold: true };
-            fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; fRow.getCell(4).font = { color: { argb: sFoot.argb }, bold: sFoot.bold }; fRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; cur++;
+            const fRow = ws.addRow(['總計', total, '', document.getElementById('vFooter').value, '']); ws.mergeCells(`D${fRow.number}:E${fRow.number}`); fRow.height = 30; fRow.font = { bold: true };
+            fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; fRow.getCell(4).font = { color: { argb: sFoot.argb }, bold: sFoot.bold }; fRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
 
             ws.eachRow((row, rn) => { if(rn >= (logoData ? 4 : 1)) row.eachCell({ includeEmpty: true }, (cell, cn) => { if (cn <= 5) cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; }); });
-            ws.pageSetup.printArea = `A1:E${cur}`;
+            ws.pageSetup.printArea = `A1:E${fRow.number}`;
             saveAs(new Blob([await wb.xlsx.writeBuffer()]), `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '未命名'}.xlsx`);
         }
     </script>
