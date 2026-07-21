@@ -203,6 +203,25 @@
         
         /* 修改：加入 resize: vertical 與 overflow-y: auto 讓備註框可以自由往下拉長放大 */
         .inp-r { width: 100%; min-height: 50px; margin-top: 5px; resize: vertical; overflow-y: auto; }
+
+        /* --- 名單細項模式：同一列可再加第二組「號碼/姓名」，充分利用版面 --- */
+        .size-row-pair2 { display: flex; gap: 8px; margin-top: 6px; padding-top: 8px; border-top: 1px dashed #dfe2f5; align-items: flex-start; }
+        .inp-q2 {
+            width: 64px; flex-shrink: 0; text-align: center; font-weight: 700; color: var(--primary);
+            padding: 8px; border: 2px solid #e7e8f8; border-radius: 10px; background: #fff; font-size: 14px; outline: none;
+        }
+        .inp-q2:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91, 94, 244, 0.14); }
+        .inp-r2 { flex: 1; min-height: 40px; }
+        .pair2-tag { font-size: 11px; color: #9598c2; flex-shrink: 0; align-self: center; }
+
+        /* --- 訂製衣褲模式：姓名 + 背號(選填) + 衣尺寸 + 褲尺寸，由左至右排在同一列 --- */
+        .inp-name { flex: 1.6; text-align: left; }
+        .inp-num {
+            width: 78px; flex-shrink: 0; text-align: center; font-weight: 700; color: var(--primary);
+            padding: 8px; border: 2px solid #e7e8f8; border-radius: 10px; background: #fff; font-size: 14px; outline: none;
+        }
+        .inp-num:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(91, 94, 244, 0.14); }
+        .inp-size1, .inp-size2 { flex: 1; text-align: center; color: var(--primary); }
         
         .btn-mini {
             width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
@@ -296,11 +315,53 @@
         .info-grid { display: grid; grid-template-columns: 80px 1fr 80px 1fr; border: 2px solid #000; margin-bottom: 8px; }
         .grid-cell { padding: 6px 8px; border: 1px solid #000; font-size: 11pt; display: flex; align-items: center; }
         .cell-label { background: #eee; font-weight: bold; justify-content: center; }
-        
-        .img-area { width: 100%; height: 320px; border: 2px solid #000; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #fff; }
-        .img-area img { max-width: 98%; max-height: 98%; object-fit: contain; }
-        .img-area-small { width: 100%; height: 120px; border: 2px solid #000; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #fff; }
-        .img-area-small img { max-width: 98%; max-height: 98%; object-fit: contain; }
+
+        /* --- 新版表頭欄位：三列等高、四組欄寬一致，貼近公司現用製單的平均分格 --- */
+        .info-grid-v2 {
+            display: grid;
+            grid-template-columns: 60px 1fr 60px 1fr 60px 1fr 60px 1.2fr;
+            grid-auto-rows: 42px;
+            border: 2px solid #000;
+            margin-bottom: 6px;
+            font-size: 9pt;
+        }
+        .info-grid-v2 .grid-cell { padding: 4px 5px; border: 1px solid #000; display: flex; align-items: center; overflow: visible; box-sizing: border-box; }
+        .info-grid-v2 .cell-label { background: #eee; font-weight: bold; justify-content: center; text-align: center; line-height: 1.2; white-space: nowrap; }
+        .info-grid-v2 .cell-stack { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; line-height: 1.2; width: 100%; white-space: nowrap; }
+        .info-grid-v2 .grid-cell:not(.cell-label) .cell-stack { align-items: flex-start; }
+        .pack-check { font-weight: bold; white-space: nowrap; }
+
+        .img-area { width: 100%; height: 320px; border: 2px solid #000; margin-bottom: 8px; overflow: hidden; background: #fff; position: relative; touch-action: none; }
+        .img-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; color: #ccc; font-size: 24px; font-weight: bold; letter-spacing: 2px; pointer-events: none; }
+        .img-area-small { width: 100%; height: 120px; border: 2px solid #000; margin-bottom: 8px; overflow: hidden; background: #fff; position: relative; }
+        /* 每張示意圖的拖曳/縮放容器 */
+        .img-item { position: absolute; box-sizing: border-box; cursor: move; }
+        .img-item img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+        .img-item.selected { outline: 2px dashed var(--primary); outline-offset: 2px; }
+        .img-delete-btn {
+            position: absolute; top: -11px; right: -11px; width: 22px; height: 22px; border-radius: 50%;
+            background: var(--danger); color: #fff; display: none; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 5;
+        }
+        .img-item.selected .img-delete-btn { display: flex; }
+        .img-resize-handle {
+            position: absolute; right: -7px; bottom: -7px; width: 16px; height: 16px; border-radius: 50%;
+            background: var(--primary); border: 2px solid #fff; cursor: nwse-resize; display: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 5;
+        }
+        .img-item.selected .img-resize-handle { display: block; }
+        /* 匯出成 PDF/JPEG/Excel 快照時，隱藏拖曳/縮放/刪除等互動用UI，只留下純圖片內容 */
+        .exporting .img-delete-btn, .exporting .img-resize-handle { display: none !important; }
+        .exporting .img-item.selected { outline: none !important; }
+
+        /* --- 示意圖上傳縮圖清單(側邊欄) --- */
+        .img-thumb-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .img-thumb { position: relative; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; border: 2px solid #e7e8f8; background: #f8f9fe; }
+        .img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .img-thumb .img-thumb-del {
+            position: absolute; top: 0; right: 0; width: 18px; height: 18px; background: rgba(245,54,92,0.92); color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; border-bottom-left-radius: 6px;
+        }
         
         .detail-area { display: grid; grid-template-columns: 1fr 180px; border: 2px solid #000; min-height: 80px; margin-bottom: 8px; }
         .detail-text { padding: 8px; border-right: 1px solid #000; font-size: 11pt; white-space: pre-wrap; word-break: break-all; }
@@ -309,6 +370,7 @@
         table.order-table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
         table.order-table th, table.order-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 11pt; vertical-align: middle; word-break: break-all; }
         table.order-table th { background: #eee; border-bottom: 2px solid #000; font-weight: bold; }
+        table.order-table th.th-orange { background: #f8cbad; }
         table.order-table td:last-child { text-align: left; padding-left: 8px; white-space: pre-wrap; }
 
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(23,26,46,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: white; display: none; justify-content: center; align-items: center; flex-direction: column; z-index: 1000; gap: 18px; }
@@ -329,8 +391,13 @@
             .page-badge { display: none !important; }
             #loadingOverlay { display: none !important; }
             .preview-container { padding: 0; margin: 0; background: white; display: block; overflow: visible; height: auto; }
-            .sheet { flex-shrink: 0; margin: 0; box-shadow: none; width: 100%; height: 297mm; max-height: 297mm; page-break-after: always; border: none; overflow: hidden; transform: none !important; }
+            .sheet { flex-shrink: 0; margin: 0; box-shadow: none; width: 100%; height: 297mm; max-height: 297mm; page-break-after: always; break-after: page; border: none; overflow: hidden; clip-path: inset(0); contain: paint; transform: none !important; }
+            /* 最後一頁不需要再強制分頁，避免最後面多印出一張空白頁 */
+            .sheet-wrap:last-child .sheet { page-break-after: auto; break-after: auto; }
+            .sheet-wrap { page-break-inside: avoid; break-inside: avoid; }
             .sheet-wrap { width: auto !important; height: auto !important; overflow: visible !important; margin: 0 !important; }
+            .img-delete-btn, .img-resize-handle { display: none !important; }
+            .img-item { outline: none !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
@@ -389,15 +456,35 @@
                 <div class="card-title"><span><span class="icon-badge icon-badge-blue"><i class="fas fa-heading"></i></span> 單據標題</span>
                     <div class="tools"><div class="color-circle"><input type="color" id="cTitle" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bTitle"><i class="fas fa-bold"></i><input type="checkbox" id="bTitle" checked onchange="toggleChk('bTitle'); render()"></label></div>
                 </div>
-                <input type="text" id="vTitle" value="成衣製造單" placeholder="輸入標題" oninput="render()">
+                <div class="row-2">
+                    <input type="text" id="vTitle" value="製單" placeholder="輸入標題" oninput="render()" style="flex:2">
+                    <input type="text" id="vYear" value="" placeholder="年份" oninput="render()" style="flex:1; text-align:center;">
+                </div>
+                <p style="font-size:11px; color:#94a3b8; margin:6px 0 0;">💡 標題會自動接上年份，例如「製單」+「2026」＝「製單2026」，年份可自由修改或留空。</p>
             </div>
 
             <div class="card">
                 <div class="card-title"><span><span class="icon-badge icon-badge-teal"><i class="fas fa-id-card"></i></span> 基本資料</span>
                     <div class="tools"><div class="color-circle"><input type="color" id="cHeader" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bHeader"><i class="fas fa-bold"></i><input type="checkbox" id="bHeader" onchange="toggleChk('bHeader'); render()"></label></div>
                 </div>
-                <div class="row-2"><input id="vUnit" placeholder="單位 (Unit)" oninput="render()"><input id="vVendor" placeholder="廠商 (Vendor)" oninput="render()"></div>
-                <div class="row-2"><input id="vStyle" placeholder="衣版 (Style)" oninput="render()"><input id="vColor" placeholder="顏色 (Color)" oninput="render()"></div>
+                <div class="row-2"><input id="vStyle" placeholder="版號" oninput="render()"><input id="vWorkOrder" placeholder="工單號" oninput="render()"></div>
+                <div class="row-2"><input id="vCutDate" type="date" placeholder="裁片日期" oninput="render()"><input id="vDate" type="date" placeholder="交貨日期" oninput="render()"></div>
+                <div class="row-2"><input id="vUnit" placeholder="客戶單位" oninput="render()"><input id="vVendor" placeholder="車縫單位" oninput="render()"></div>
+                <div class="row-2"><input id="vItem" placeholder="品項" oninput="render()"><input id="vColor" placeholder="顏色" oninput="render()"></div>
+                <input id="vNoteHeader" placeholder="備註" oninput="render()" style="margin-top:10px;">
+            </div>
+
+            <div class="card">
+                <div class="card-title"><span><span class="icon-badge icon-badge-purple"><i class="fas fa-industry"></i></span> 生產資訊</span></div>
+                <div class="row-2"><input id="vSizeDesc" placeholder="尺寸標說明" oninput="render()"><input id="vFabric" placeholder="布料" oninput="render()"></div>
+                <div class="row-2"><input id="vSales" placeholder="業務" oninput="render()"><input id="vDesigner" placeholder="美編" oninput="render()"></div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:12px; font-weight:bold; color:#6b6f8f; display:block; margin-bottom:6px;">包裝方式</label>
+                    <div class="tools">
+                        <label class="chk-3d active" id="lbl-pack1"><input type="radio" name="vPackaging" value="一般" checked onchange="selectPackaging(this.value)"> 一般</label>
+                        <label class="chk-3d" id="lbl-pack2"><input type="radio" name="vPackaging" value="禾田專用" onchange="selectPackaging(this.value)"> 禾田專用</label>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
@@ -405,20 +492,28 @@
                     <div class="tools"><div class="color-circle"><input type="color" id="cDetail" value="#000000" oninput="render()"></div><label class="chk-3d" id="lbl-bDetail"><i class="fas fa-bold"></i><input type="checkbox" id="bDetail" onchange="toggleChk('bDetail'); render()"></label></div>
                 </div>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <label class="btn-3d btn-white" style="flex:1"><i class="fas fa-image"></i> 上傳圖片<input type="file" id="imgInput" accept="image/*" onchange="loadImg(this)" style="display:none"></label>
-                    <button class="btn-3d btn-gray" onclick="clearImg()" title="清除圖片"><i class="fas fa-times"></i></button>
+                    <label class="btn-3d btn-white" style="flex:1"><i class="fas fa-image"></i> 新增圖片<input type="file" id="imgInput" accept="image/*" multiple onchange="loadImg(this)" style="display:none"></label>
+                    <button class="btn-3d btn-gray" onclick="if(confirm('確定要清除全部示意圖片嗎？'))clearAllImg()" title="清除全部圖片"><i class="fas fa-times"></i></button>
                 </div>
-                <textarea id="vDetail" placeholder="輸入製作注意事項..." oninput="render()"></textarea>
-                <div style="margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px; display:flex; align-items:center; gap:10px;">
-                    <i class="far fa-calendar-alt" style="color:var(--primary)"></i><label style="font-size:13px; font-weight:bold;">交期：</label><input type="date" id="vDate" oninput="render()" style="border:none; background:transparent; padding:0; height:auto;">
-                </div>
+                <p style="font-size:11px; color:#94a3b8; margin:0 0 6px;">💡 可一次新增多張圖片，直接在右側示意圖框內用滑鼠拖曳移動、拖角落把手縮放；點縮圖右上角 × 可個別刪除。</p>
+                <div class="img-thumb-list" id="imgThumbList"></div>
+                <textarea id="vDetail" placeholder="輸入製作注意事項..." oninput="render()" style="margin-top:10px;"></textarea>
             </div>
 
             <div class="card">
                 <div class="card-title" style="margin-bottom: 5px;"><span><span class="icon-badge icon-badge-purple"><i class="fas fa-ruler-combined"></i></span> 尺寸與數量 (支援反白選字改色)</span></div>
+                <div class="tools" style="margin-bottom:10px; flex-wrap:wrap;">
+                    <label class="chk-3d active" id="lbl-mode-qty" style="flex:1 1 30%; justify-content:center;"><input type="radio" name="tableMode" value="qty" checked onchange="setTableMode('qty')"> 尺寸/數量</label>
+                    <label class="chk-3d" id="lbl-mode-roster" style="flex:1 1 30%; justify-content:center;"><input type="radio" name="tableMode" value="roster" onchange="setTableMode('roster')"> 名單細項(號碼/姓名)</label>
+                    <label class="chk-3d" id="lbl-mode-combo" style="flex:1 1 30%; justify-content:center;"><input type="radio" name="tableMode" value="combo" onchange="setTableMode('combo')"> 訂製衣褲(姓名/背號/衣褲尺寸)</label>
+                </div>
                 <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0;">💡 提示：在輸入框反白文字，或直接點在框內，按 B 即可單獨改色或加粗。</p>
                 <div id="sizeList"></div>
-                <button class="btn-3d btn-white" style="width:100%; border:2px dashed #cbd5e1; color:#64748b; box-shadow:none;" onclick="addSize()"><i class="fas fa-plus-circle"></i> 新增尺寸列</button>
+                <button class="btn-3d btn-white" style="width:100%; border:2px dashed #cbd5e1; color:#64748b; box-shadow:none;" onclick="addSize()"><i class="fas fa-plus-circle"></i> 新增一列</button>
+                <div id="workNoteWrap" style="display:none; margin-top:12px;">
+                    <label style="font-size:12px; font-weight:bold; color:#6b6f8f; display:block; margin-bottom:6px;">做工說明 (名單細項表共用，會印在表格右側)</label>
+                    <textarea id="vWorkNote" placeholder="輸入做工說明..." oninput="render()"></textarea>
+                </div>
             </div>
 
             <div class="card">
@@ -444,9 +539,15 @@
     <div class="preview-container" id="previewArea"></div>
 
     <script>
-        const ROWS_PAGE1 = 7; 
+        const ROWS_PAGE1 = 6; 
         const ROWS_PAGE_N = 20; 
-        let imgData = null; let logoData = null; 
+        const IMG_BOX_TRUE_W = 680, IMG_BOX_TRUE_H = 320; // 示意圖框內部「真實」像素尺寸(對應CSS：210mm-左右padding各15mm，高度固定320px)
+        let logoData = null;
+        let imgList = []; // 示意圖：多張圖片，每張 {id, src, x, y, scale, naturalW, naturalH}
+        let selectedImgId = null;
+        let nextImgId = 1;
+        let currentMobileScale = 1; // 追蹤目前手機版縮放比例，拖曳/縮放示意圖時需要用它把螢幕像素換算回真實像素
+        let tableMode = 'qty'; // 'qty'=尺寸/數量/備註表 ; 'roster'=名單細項(尺寸/號碼/姓名)表，兩種共用同一份列資料(s,q,r)，只是欄位意義與標籤不同
 
         // --- 離開前存檔提醒：只要內容有變動且尚未存 JSON，關閉分頁/視窗前會跳出瀏覽器警告視窗 ---
         let hasUnsavedChanges = false;
@@ -470,13 +571,60 @@
             document.body.classList.remove('sidebar-open');
         }
 
+        function selectPackaging(value) {
+            document.getElementById('lbl-pack1').classList.toggle('active', value === '一般');
+            document.getElementById('lbl-pack2').classList.toggle('active', value === '禾田專用');
+            render();
+        }
+
+        // 切換表格模式：「尺寸/數量」跟「名單細項」共用同一份列資料(s,q,r/q2,r2)，只是欄位意義跟顯示標籤不同；
+        // 但「訂製衣褲」欄位結構完全不同(姓名/背號/衣尺寸/褲尺寸)，跨這個界線切換時既有列資料對不上，需清空重建並先跟使用者確認
+        function setTableMode(mode) {
+            const prevMode = tableMode;
+            const crossingComboBoundary = (prevMode === 'combo') !== (mode === 'combo');
+            if (crossingComboBoundary) {
+                const contentSelectors = '.inp-s, .inp-q, .inp-r, .inp-q2, .inp-r2, .inp-name, .inp-num, .inp-size1, .inp-size2';
+                const hasContent = Array.from(document.querySelectorAll('.size-item')).some(row =>
+                    Array.from(row.querySelectorAll(contentSelectors)).some(el => (el.value !== undefined ? el.value : el.textContent).trim() !== '')
+                );
+                if (hasContent && !confirm('「訂製衣褲」的欄位結構(姓名/背號/衣尺寸/褲尺寸)跟目前的表格不同，切換後目前已輸入的列會被清空重新開始，確定要切換嗎？')) {
+                    document.querySelector(`input[name="tableMode"][value="${prevMode}"]`).checked = true;
+                    return;
+                }
+                tableMode = mode;
+                document.getElementById('sizeList').innerHTML = '';
+                addSize();
+            } else {
+                tableMode = mode;
+            }
+            document.getElementById('lbl-mode-qty').classList.toggle('active', mode === 'qty');
+            document.getElementById('lbl-mode-roster').classList.toggle('active', mode === 'roster');
+            document.getElementById('lbl-mode-combo').classList.toggle('active', mode === 'combo');
+            document.getElementById('workNoteWrap').style.display = mode === 'roster' ? 'block' : 'none';
+            updateSizeRowPlaceholders();
+            render();
+        }
+        function updateSizeRowPlaceholders() {
+            if (tableMode === 'combo') return; // combo模式欄位固定且切換時已重建過，不需要再改placeholder
+            const isRoster = tableMode === 'roster';
+            document.querySelectorAll('.size-item').forEach(row => {
+                if (!row.querySelector('.inp-s')) return; // 保險：避免混到combo結構的列
+                row.querySelector('.inp-s').dataset.placeholder = '尺碼';
+                row.querySelector('.inp-q').placeholder = isRoster ? '號碼①' : '數量';
+                row.querySelector('.inp-r').dataset.placeholder = isRoster ? '姓名① (反白文字或點入框內，按右上角改色/加粗)...' : '備註內容 (反白文字或點入框內，按右上角改色/加粗)...';
+                const pair2 = row.querySelector('.size-row-pair2');
+                if (pair2) pair2.style.display = isRoster ? 'flex' : 'none';
+            });
+        }
+
         // --- 手機版：依可視寬度計算A4預覽的縮放比例(僅視覺縮放，不影響匯出的實際像素尺寸) ---
         function updateMobileScale() {
-            if (window.innerWidth > 900) { document.documentElement.style.setProperty('--mobile-scale', 1); return; }
+            if (window.innerWidth > 900) { currentMobileScale = 1; document.documentElement.style.setProperty('--mobile-scale', 1); return; }
             const container = document.getElementById('previewArea');
             if (!container) return;
             const availableWidth = container.clientWidth - 24;
             const scale = Math.max(0.25, Math.min(1, availableWidth / 794));
+            currentMobileScale = scale;
             document.documentElement.style.setProperty('--mobile-scale', scale);
         }
         window.addEventListener('resize', updateMobileScale);
@@ -533,27 +681,92 @@
         function toggleChk(id) { const el = document.getElementById(id), lbl = document.getElementById('lbl-' + id); if(lbl) lbl.classList.toggle('active', el.checked); }
 
         function resetForm() {
-            ['vTitle', 'vUnit', 'vVendor', 'vStyle', 'vColor', 'vDetail', 'vDate', 'vFooter'].forEach(id => { document.getElementById(id).value = (id === 'vTitle') ? '成衣製造單' : ''; });
+            ['vTitle', 'vUnit', 'vVendor', 'vStyle', 'vColor', 'vDetail', 'vDate', 'vFooter', 'vYear', 'vWorkOrder', 'vCutDate', 'vNoteHeader', 'vSizeDesc', 'vFabric', 'vItem', 'vSales', 'vDesigner', 'vWorkNote'].forEach(id => { document.getElementById(id).value = (id === 'vTitle') ? '製單' : ''; });
             document.getElementById('cHeader').value = '#000000'; document.getElementById('cDetail').value = '#000000'; document.getElementById('cFooter').value = '#ff0000';
             document.getElementById('bHeader').checked = false; toggleChk('bHeader'); document.getElementById('bDetail').checked = false; toggleChk('bDetail'); document.getElementById('bFooter').checked = true; toggleChk('bFooter');
-            imgData = null; logoData = null; document.getElementById('imgInput').value = ''; document.getElementById('logoInput').value = '';
+            selectPackagingSilent('一般');
+            document.querySelector('input[name="tableMode"][value="qty"]').checked = true;
+            setTableModeSilent('qty');
+            imgList = []; selectedImgId = null; logoData = null; document.getElementById('imgInput').value = ''; document.getElementById('logoInput').value = '';
             document.getElementById('sizeList').innerHTML = ''; addSize(); render();
             hasUnsavedChanges = false;
         }
+        // 不觸發render()的表格模式設定(供resetForm/loadProject內部使用，避免重複渲染)
+        function setTableModeSilent(mode) {
+            tableMode = mode;
+            document.getElementById('lbl-mode-qty').classList.toggle('active', mode === 'qty');
+            document.getElementById('lbl-mode-roster').classList.toggle('active', mode === 'roster');
+            document.getElementById('lbl-mode-combo').classList.toggle('active', mode === 'combo');
+            document.getElementById('workNoteWrap').style.display = mode === 'roster' ? 'block' : 'none';
+        }
+        // 不觸發render()的包裝方式設定(供resetForm/loadProject內部使用，避免重複渲染)
+        function selectPackagingSilent(value) {
+            const r1 = document.querySelector('input[name="vPackaging"][value="一般"]'), r2 = document.querySelector('input[name="vPackaging"][value="禾田專用"]');
+            if (r1) r1.checked = (value !== '禾田專用'); if (r2) r2.checked = (value === '禾田專用');
+            document.getElementById('lbl-pack1').classList.toggle('active', value !== '禾田專用');
+            document.getElementById('lbl-pack2').classList.toggle('active', value === '禾田專用');
+        }
+        function getPackagingValue() { const el = document.querySelector('input[name="vPackaging"]:checked'); return el ? el.value : '一般'; }
 
         function loadLogo(input) { if(input.files && input.files[0]) { const r = new FileReader(); r.onload = e => { logoData = e.target.result; render(); }; r.readAsDataURL(input.files[0]); } }
         function clearLogo() { logoData = null; document.getElementById('logoInput').value = ''; render(); }
-        function loadImg(input) { if(input.files && input.files[0]) { const r = new FileReader(); r.onload = e => { imgData = e.target.result; render(); }; r.readAsDataURL(input.files[0]); } }
-        function clearImg() { imgData = null; document.getElementById('imgInput').value = ''; render(); }
 
-        function addSize(sHtml='', q='', rHtml='') {
+        // 新增示意圖：可一次選取多張圖片，每張都會量測原始尺寸，預設等比縮到示意圖框內置中顯示，之後可再自由拖曳/縮放
+        function loadImg(input) {
+            if (!input.files || !input.files.length) return;
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const src = e.target.result;
+                    const probe = new Image();
+                    probe.onload = () => {
+                        const naturalW = probe.naturalWidth || 1, naturalH = probe.naturalHeight || 1;
+                        const fitScale = Math.min(IMG_BOX_TRUE_W / naturalW, IMG_BOX_TRUE_H / naturalH, 1);
+                        const w = naturalW * fitScale, h = naturalH * fitScale;
+                        const offset = (imgList.length % 6) * 14; // 新圖片之間稍微錯開位置，避免完全疊在一起看不到
+                        const item = { id: nextImgId++, src, x: (IMG_BOX_TRUE_W - w) / 2 + offset, y: (IMG_BOX_TRUE_H - h) / 2 + offset, scale: fitScale, naturalW, naturalH };
+                        imgList.push(item); selectedImgId = item.id; render();
+                    };
+                    probe.src = src;
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = '';
+        }
+        function deleteImgItem(id) { imgList = imgList.filter(it => it.id !== id); if (selectedImgId === id) selectedImgId = null; render(); }
+        function clearAllImg() { imgList = []; selectedImgId = null; document.getElementById('imgInput').value = ''; render(); }
+
+
+        function addSize(sHtml='', q='', rHtml='', q2='', r2Html='', nameHtml='', numVal='', size1Html='', size2Html='') {
+            const isRoster = tableMode === 'roster';
             const div = document.createElement('div'); div.className = 'size-item';
+            if (tableMode === 'combo') {
+                div.innerHTML = `
+                    <div class="size-row-top">
+                        <i class="fas fa-grip-vertical handle" title="按住拖曳"></i>
+
+                        <div class="inp-name rich-input" contenteditable="true" data-placeholder="姓名" oninput="render()">${nameHtml}</div>
+                        <input class="inp-num" type="number" value="${numVal}" placeholder="背號(選填)" oninput="render()">
+                        <div class="inp-size1 rich-input" contenteditable="true" data-placeholder="衣尺寸" oninput="render()">${size1Html}</div>
+                        <div class="inp-size2 rich-input" contenteditable="true" data-placeholder="褲尺寸" oninput="render()">${size2Html}</div>
+
+                        <div class="color-circle" style="width:26px; height:26px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:none;" title="選色">
+                            <input type="color" onchange="applyFormatToSelection('foreColor', this.value)">
+                        </div>
+                        <button class="btn-mini btn-mini-bold" onmousedown="event.preventDefault(); applyFormatToSelection('bold')" title="加粗">B</button>
+                        <button class="btn-mini btn-mini-del" onclick="this.closest('.size-item').remove(); render()" title="刪除此列">×</button>
+                    </div>
+                `;
+                document.getElementById('sizeList').appendChild(div);
+                render();
+                return;
+            }
             div.innerHTML = `
                 <div class="size-row-top">
                     <i class="fas fa-grip-vertical handle" title="按住拖曳"></i>
                     
                     <div class="inp-s rich-input" contenteditable="true" data-placeholder="尺碼" oninput="render()">${sHtml}</div>
-                    <input class="inp-q" type="number" value="${q}" placeholder="數量" oninput="render()">
+                    <input class="inp-q" type="number" value="${q}" placeholder="${isRoster ? '號碼①' : '數量'}" oninput="render()">
                     
                     <div style="flex:1"></div> 
                     <div class="color-circle" style="width:26px; height:26px; border-radius:4px; border:1px solid #cbd5e1; box-shadow:none;" title="選色">
@@ -562,7 +775,12 @@
                     <button class="btn-mini btn-mini-bold" onmousedown="event.preventDefault(); applyFormatToSelection('bold')" title="加粗">B</button>
                     <button class="btn-mini btn-mini-del" onclick="this.closest('.size-item').remove(); render()" title="刪除此列">×</button>
                 </div>
-                <div class="inp-r rich-input" contenteditable="true" data-placeholder="備註內容 (反白文字或點入框內，按右上角改色/加粗)..." oninput="render()">${rHtml}</div>
+                <div class="inp-r rich-input" contenteditable="true" data-placeholder="${isRoster ? '姓名① (反白文字或點入框內，按右上角改色/加粗)...' : '備註內容 (反白文字或點入框內，按右上角改色/加粗)...'}" oninput="render()">${rHtml}</div>
+                <div class="size-row-pair2" style="${isRoster ? '' : 'display:none;'}">
+                    <span class="pair2-tag">同列<br>第2位</span>
+                    <input class="inp-q2" type="number" value="${q2}" placeholder="號碼②" oninput="render()">
+                    <div class="inp-r2 rich-input" contenteditable="true" data-placeholder="姓名② (選填，同一列可再放一位，充分利用空間)..." oninput="render()">${r2Html}</div>
+                </div>
             `;
             document.getElementById('sizeList').appendChild(div);
             render();
@@ -577,22 +795,53 @@
                 detail: { color: getVal('cDetail'), bold: getChk('bDetail') }, footer: { color: getVal('cFooter'), bold: getChk('bFooter') }
             };
             const data = {
-                title: getVal('vTitle') || ' ', unit: getVal('vUnit') || ' ', vendor: getVal('vVendor') || ' ',
+                title: (getVal('vTitle') || ' ') + (getVal('vYear') || ''),
+                unit: getVal('vUnit') || ' ', vendor: getVal('vVendor') || ' ',
                 style: getVal('vStyle') || ' ', color: getVal('vColor') || ' ', detail: getVal('vDetail') || ' ', date: getVal('vDate'),
+                workOrder: getVal('vWorkOrder') || ' ', cutDate: getVal('vCutDate') || ' ', noteHeader: getVal('vNoteHeader') || ' ',
+                sizeDesc: getVal('vSizeDesc') || ' ', fabric: getVal('vFabric') || ' ', item: getVal('vItem') || ' ',
+                sales: getVal('vSales') || ' ', designer: getVal('vDesigner') || ' ', packaging: getPackagingValue(),
+                workNote: getVal('vWorkNote') || ' ',
                 footer: getVal('vFooter') || ' ', rows: []
             };
 
             let total = 0;
             document.querySelectorAll('.size-item').forEach(row => {
+                if (tableMode === 'combo') {
+                    const nameEl = row.querySelector('.inp-name'), numEl = row.querySelector('.inp-num'), s1El = row.querySelector('.inp-size1'), s2El = row.querySelector('.inp-size2');
+                    if (!nameEl) return; // 保險：避免混到其他模式結構的舊列
+                    const name = nameEl.innerHTML, num = numEl.value, size1 = s1El.innerHTML, size2 = s2El.innerHTML;
+                    const nameText = nameEl.textContent.trim(), size1Text = s1El.textContent.trim(), size2Text = s2El.textContent.trim();
+                    if (nameText || num || size1Text || size2Text || name.includes('<img')) {
+                        data.rows.push({ name, num, size1, size2 });
+                        total += 1; // 背號同樣只是選填的識別碼，不是數量，合計算「訂製人數」
+                    }
+                    return;
+                }
                 const s = row.querySelector('.inp-s').innerHTML;
                 const q = row.querySelector('.inp-q').value;
                 const r = row.querySelector('.inp-r').innerHTML;
+                const q2El = row.querySelector('.inp-q2'), r2El = row.querySelector('.inp-r2');
+                const q2 = q2El ? q2El.value : '';
+                const r2 = r2El ? r2El.innerHTML : '';
                 const sText = row.querySelector('.inp-s').textContent.trim();
                 const rText = row.querySelector('.inp-r').textContent.trim();
-                
-                if (sText || q || rText || s.includes('<img') || r.includes('<img')) { 
-                    data.rows.push({ s, q, r }); 
-                    if (q && !isNaN(q)) total += parseInt(q); 
+                const r2Text = r2El ? r2El.textContent.trim() : '';
+                // 第1位：只要這一列有任何內容(尺碼/號碼/姓名/圖片)就算存在一件，即使沒背號、沒姓名，只填了尺碼也算1件
+                const hasEntry1 = sText || q || rText || s.includes('<img') || r.includes('<img');
+                // 第2位：完全獨立判斷，只要「號碼②」或「姓名②」任一有填，就視為同一列多算1件
+                const hasEntry2 = q2 || r2Text || r2.includes('<img');
+
+                if (hasEntry1 || hasEntry2) { 
+                    data.rows.push({ s, q, r, q2, r2 }); 
+                    if (tableMode === 'roster') {
+                        // 名單細項模式：號碼是背號(球員編號)，不是數量，合計要算「人數/件數」而不是加總背號
+                        if (hasEntry1) total += 1;
+                        if (hasEntry2) total += 1;
+                    } else {
+                        // 尺寸/數量模式：這裡的數字才是真正的件數，合計照樣加總
+                        if (q && !isNaN(q)) total += parseInt(q);
+                    }
                 }
             });
 
@@ -604,6 +853,17 @@
             const badgeText = document.getElementById('pageBadgeText');
             if (badgeText) badgeText.textContent = `共 ${pages.length} 頁`;
 
+            // 產生單張示意圖的HTML(可拖曳/縮放版本，用於第一頁的示意圖框)
+            function buildImgItemHtml(item) {
+                const w = item.naturalW * item.scale, h = item.naturalH * item.scale;
+                const sel = item.id === selectedImgId ? ' selected' : '';
+                return `<div class="img-item${sel}" data-id="${item.id}" style="left:${item.x}px; top:${item.y}px; width:${w}px; height:${h}px;">
+                    <img src="${item.src}" draggable="false">
+                    <div class="img-delete-btn" title="刪除">×</div>
+                    <div class="img-resize-handle" title="拖曳縮放"></div>
+                </div>`;
+            }
+
             pages.forEach((page, idx) => {
                 const sheet = document.createElement('div'); sheet.className = 'sheet';
                 let html = '';
@@ -612,55 +872,187 @@
                 html += `<div class="sheet-header"><h1 class="sheet-title" style="color:${styles.title.color}; font-weight:${styles.title.bold?'bold':'normal'}">${titleText}</h1></div>`;
                 
                 if (page.type === 'first') {
-                    const hStyle = `color:${styles.header.color}; font-weight:${styles.header.bold?'bold':'normal'}`;
-                    html += `<div class="info-grid">
-                        <div class="grid-cell cell-label">單位</div><div class="grid-cell" style="${hStyle}">${data.unit}</div>
-                        <div class="grid-cell cell-label">廠商</div><div class="grid-cell" style="${hStyle}">${data.vendor}</div>
-                        <div class="grid-cell cell-label">衣版</div><div class="grid-cell" style="${hStyle}">${data.style}</div>
+                    const hStyle = `color:${styles.header.color}; font-weight:${styles.header.bold?'bold':'normal'};`;
+                    const packChecked = (v) => data.packaging === v ? '☑' : '☐';
+                    html += `<div class="info-grid-v2">
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>版號</span><span>工單號</span></div></div>
+                        <div class="grid-cell" style="${hStyle}"><div class="cell-stack"><span>${data.style}</span><span>${data.workOrder}</span></div></div>
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>裁片</span><span>日期</span></div></div><div class="grid-cell" style="${hStyle}">${data.cutDate}</div>
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>交貨</span><span>日期</span></div></div><div class="grid-cell" style="${hStyle}">${data.date}</div>
+                        <div class="grid-cell cell-label">備註</div><div class="grid-cell" style="${hStyle}">${data.noteHeader}</div>
+
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>客戶</span><span>單位</span></div></div><div class="grid-cell" style="${hStyle}">${data.unit}</div>
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>尺寸標</span><span>說明</span></div></div><div class="grid-cell" style="${hStyle}">${data.sizeDesc}</div>
+                        <div class="grid-cell cell-label">布料</div><div class="grid-cell" style="${hStyle}">${data.fabric}</div>
+                        <div class="grid-cell cell-label"><div class="cell-stack"><span>車縫</span><span>單位</span></div></div><div class="grid-cell" style="${hStyle}">${data.vendor}</div>
+
+                        <div class="grid-cell cell-label">品項</div><div class="grid-cell" style="${hStyle}">${data.item}</div>
                         <div class="grid-cell cell-label">顏色</div><div class="grid-cell" style="${hStyle}">${data.color}</div>
-                    </div><div style="font-weight:bold; margin-bottom:5px;">示意圖/圖稿：</div>
-                    <div class="img-area">${imgData ? `<img src="${imgData}">` : `<span style="color:#ccc; font-size:24px; font-weight:bold; letter-spacing:2px;">圖稿預覽</span>`}</div>`;
+                        <div class="grid-cell" style="${hStyle} grid-column: span 2; justify-content:flex-start; text-align:left;"><div class="cell-stack"><span>業務：${data.sales}</span><span>美編：${data.designer}</span></div></div>
+                        <div class="grid-cell cell-label">包裝</div><div class="grid-cell"><div class="cell-stack"><span class="pack-check">${packChecked('一般')} 一般</span><span class="pack-check">${packChecked('禾田專用')} 禾田專用</span></div></div>
+                    </div><div style="font-weight:bold; margin-bottom:5px;">示意圖/裁片圖：</div>
+                    <div class="img-area">${imgList.length ? imgList.map(buildImgItemHtml).join('') : `<span class="img-placeholder">圖稿預覽</span>`}</div>`;
                     const dStyle = `color:${styles.detail.color}; font-weight:${styles.detail.bold?'bold':'normal'}`;
                     html += `<div style="font-weight:bold; margin-bottom:5px;">製作說明：</div>
-                    <div class="detail-area"><div class="detail-text" style="${dStyle}">${data.detail}</div>
-                        <div class="date-area"><span style="font-weight:bold; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:10px;">希望交期</span><span style="font-size:16pt; font-weight:bold;">${data.date}</span></div>
-                    </div>`;
+                    <div class="detail-area"><div class="detail-text" style="${dStyle}; width:100%;">${data.detail}</div></div>`;
                 } else {
-                    html += `<div style="margin-bottom:10px; font-size:14px; color:#666;">款式：${data.style} / 顏色：${data.color}</div>`;
-                    if(imgData) html += `<div class="img-area-small"><img src="${imgData}"></div>`;
+                    html += `<div style="margin-bottom:10px; font-size:14px; color:#666;">版號：${data.style} / 顏色：${data.color}</div>`;
+                    if (imgList.length) {
+                        const r = 120 / IMG_BOX_TRUE_H; // 續頁的小圖框比正式示意圖框矮，依比例縮小顯示(僅供參考、不可互動)
+                        const smallHtml = imgList.map(item => {
+                            const w = item.naturalW * item.scale * r, h = item.naturalH * item.scale * r, x = item.x * r, y = item.y * r;
+                            return `<img src="${item.src}" style="position:absolute; left:${x}px; top:${y}px; width:${w}px; height:${h}px; object-fit:contain;">`;
+                        }).join('');
+                        html += `<div class="img-area-small">${smallHtml}</div>`;
+                    }
                 }
 
-                html += `<table class="order-table"><thead><tr><th width="15%">尺寸</th><th width="15%">數量</th><th width="5%"></th><th>備註 / 確認</th></tr></thead><tbody>`;
-                const rowsToShow = (page.rows.length === 0 && page.type === 'first') ? [{s:'',q:'',r:''}] : page.rows;
-                rowsToShow.forEach(r => { html += `<tr><td>${r.s}</td><td>${r.q}</td><td></td><td>${r.r}</td></tr>`; });
-                if (idx === pages.length - 1) {
-                    const fStyle = `color:${styles.footer.color}; font-weight:${styles.footer.bold?'bold':'normal'}`;
-                    html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
+                const emptyPlaceholderRow = tableMode === 'combo' ? {name:'',num:'',size1:'',size2:''} : {s:'',q:'',r:'',q2:'',r2:''};
+                const rowsToShow = (page.rows.length === 0 && page.type === 'first') ? [emptyPlaceholderRow] : page.rows;
+                if (tableMode === 'roster') {
+                    html += `<table class="order-table"><thead><tr><th width="9%">尺寸</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th>做工說明</th></tr></thead><tbody>`;
+                    rowsToShow.forEach((r, i) => {
+                        html += `<tr><td>${r.s}</td><td>${r.q}</td><td style="text-align:left; padding-left:8px;">${r.r}</td><td>${r.q2||''}</td><td style="text-align:left; padding-left:8px;">${r.r2||''}</td>`;
+                        if (i === 0) html += `<td rowspan="${rowsToShow.length}" style="text-align:left; padding-left:8px; white-space:pre-wrap; vertical-align:top;">${data.workNote}</td>`;
+                        html += `</tr>`;
+                    });
+                    if (idx === pages.length - 1) {
+                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="4" style="font-weight:bold; background:#eee;">${total > 0 ? total : ''}</td><td style="font-weight:bold; background:#eee;"></td></tr></tfoot>`;
+                    }
+                    html += `</tbody></table>`;
+                } else if (tableMode === 'combo') {
+                    html += `<table class="order-table"><thead><tr><th width="30%">姓名</th><th width="18%" class="th-orange">背號</th><th width="26%">衣尺寸</th><th width="26%">褲尺寸</th></tr></thead><tbody>`;
+                    rowsToShow.forEach(r => { html += `<tr><td style="text-align:left; padding-left:8px;">${r.name}</td><td>${r.num}</td><td>${r.size1}</td><td style="text-align:center;">${r.size2}</td></tr>`; });
+                    if (idx === pages.length - 1) {
+                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="3" style="font-weight:bold; background:#eee; text-align:center;">${total > 0 ? total + ' 人' : ''}</td></tr></tfoot>`;
+                    }
+                    html += `</tbody></table>`;
+                } else {
+                    html += `<table class="order-table"><thead><tr><th width="15%">尺寸</th><th width="15%">數量</th><th width="5%"></th><th>備註 / 確認</th></tr></thead><tbody>`;
+                    rowsToShow.forEach(r => { html += `<tr><td>${r.s}</td><td>${r.q}</td><td></td><td>${r.r}</td></tr>`; });
+                    if (idx === pages.length - 1) {
+                        const fStyle = `color:${styles.footer.color}; font-weight:${styles.footer.bold?'bold':'normal'}`;
+                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
+                    }
+                    html += `</tbody></table>`;
                 }
-                html += `</tbody></table><div class="page-num">Page ${idx+1} / ${pages.length}</div>`;
+                html += `<div class="page-num">Page ${idx+1} / ${pages.length}</div>`;
                 sheet.innerHTML = html;
                 const wrap = document.createElement('div'); wrap.className = 'sheet-wrap';
                 wrap.appendChild(sheet); area.appendChild(wrap);
+
+                if (page.type === 'first') {
+                    const boxEl = sheet.querySelector('.img-area');
+                    if (boxEl) attachImgAreaHandlers(boxEl);
+                }
             });
+
+            renderImgThumbList();
 
             // 新增/移除頁面(尤其是尺寸太多自動產生第二頁)後，等瀏覽器真正排版完成再量測寬度，避免用到舊的、還沒更新的尺寸導致縮放比例算錯、預覽跑版
             requestAnimationFrame(() => requestAnimationFrame(updateMobileScale));
         }
 
+        // --- 示意圖：側邊欄縮圖清單(方便在手機上也能一眼看到、快速刪除) ---
+        function renderImgThumbList() {
+            const list = document.getElementById('imgThumbList');
+            if (!list) return;
+            list.innerHTML = imgList.map(item => `
+                <div class="img-thumb"><img src="${item.src}"><div class="img-thumb-del" onclick="deleteImgItem(${item.id})" title="刪除">×</div></div>
+            `).join('');
+        }
+
+        // --- 示意圖：拖曳移動 + 拖角落把手縮放 + 點擊刪除，滑鼠/觸控通用(Pointer Events) ---
+        function attachImgAreaHandlers(boxEl) {
+            boxEl.querySelectorAll('.img-item').forEach(itemEl => {
+                const id = parseInt(itemEl.dataset.id);
+                const item = imgList.find(i => i.id === id);
+                if (item) setupImageDragResize(itemEl, item, boxEl);
+            });
+            // 點擊示意圖框內的空白處，取消選取
+            boxEl.addEventListener('pointerdown', (e) => { if (e.target === boxEl) deselectAllImg(boxEl); });
+        }
+        function deselectAllImg(boxEl) {
+            selectedImgId = null;
+            boxEl.querySelectorAll('.img-item.selected').forEach(el => el.classList.remove('selected'));
+        }
+        function selectImgItem(itemEl, boxEl, id) {
+            boxEl.querySelectorAll('.img-item.selected').forEach(el => el.classList.remove('selected'));
+            itemEl.classList.add('selected'); selectedImgId = id;
+        }
+        function setupImageDragResize(itemEl, item, boxEl) {
+            let mode = null, startX = 0, startY = 0, startLeft = 0, startTop = 0, startW = 0;
+
+            itemEl.addEventListener('pointerdown', (e) => {
+                if (e.target.classList.contains('img-resize-handle') || e.target.classList.contains('img-delete-btn')) return;
+                mode = 'drag'; itemEl.setPointerCapture(e.pointerId);
+                selectImgItem(itemEl, boxEl, item.id);
+                startX = e.clientX; startY = e.clientY; startLeft = item.x; startTop = item.y;
+                e.preventDefault(); e.stopPropagation();
+            });
+            itemEl.addEventListener('pointermove', (e) => {
+                if (mode !== 'drag') return;
+                const dx = (e.clientX - startX) / currentMobileScale, dy = (e.clientY - startY) / currentMobileScale;
+                item.x = startLeft + dx; item.y = startTop + dy;
+                itemEl.style.left = item.x + 'px'; itemEl.style.top = item.y + 'px';
+            });
+            const endInteraction = () => { if (mode) { mode = null; hasUnsavedChanges = true; } };
+            itemEl.addEventListener('pointerup', endInteraction);
+            itemEl.addEventListener('pointercancel', endInteraction);
+
+            const handle = itemEl.querySelector('.img-resize-handle');
+            handle.addEventListener('pointerdown', (e) => {
+                mode = 'resize'; handle.setPointerCapture(e.pointerId);
+                selectImgItem(itemEl, boxEl, item.id);
+                startX = e.clientX; startW = item.naturalW * item.scale;
+                e.preventDefault(); e.stopPropagation();
+            });
+            handle.addEventListener('pointermove', (e) => {
+                if (mode !== 'resize') return;
+                const dx = (e.clientX - startX) / currentMobileScale;
+                const newW = Math.max(20, startW + dx);
+                item.scale = Math.max(0.05, newW / item.naturalW);
+                const w = item.naturalW * item.scale, h = item.naturalH * item.scale;
+                itemEl.style.width = w + 'px'; itemEl.style.height = h + 'px';
+            });
+            handle.addEventListener('pointerup', endInteraction);
+            handle.addEventListener('pointercancel', endInteraction);
+
+            const delBtn = itemEl.querySelector('.img-delete-btn');
+            delBtn.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+            delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteImgItem(item.id); });
+        }
+
+
         async function saveProject() {
             const rows = [];
             document.querySelectorAll('.size-item').forEach(r => {
+                if (tableMode === 'combo') {
+                    const nameEl = r.querySelector('.inp-name'), numEl = r.querySelector('.inp-num'), s1El = r.querySelector('.inp-size1'), s2El = r.querySelector('.inp-size2');
+                    if (!nameEl) return;
+                    rows.push({ name: nameEl.innerHTML, num: numEl.value, size1: s1El.innerHTML, size2: s2El.innerHTML });
+                    return;
+                }
+                const q2El = r.querySelector('.inp-q2'), r2El = r.querySelector('.inp-r2');
                 rows.push({
                     s: r.querySelector('.inp-s').innerHTML,
                     q: r.querySelector('.inp-q').value,
-                    r: r.querySelector('.inp-r').innerHTML
+                    r: r.querySelector('.inp-r').innerHTML,
+                    q2: q2El ? q2El.value : '',
+                    r2: r2El ? r2El.innerHTML : ''
                 });
             });
             const data = {
                 title: document.getElementById('vTitle').value, cTitle: document.getElementById('cTitle').value, bTitle: document.getElementById('bTitle').checked,
+                year: document.getElementById('vYear').value,
                 unit: document.getElementById('vUnit').value, vendor: document.getElementById('vVendor').value, cHeader: document.getElementById('cHeader').value, bHeader: document.getElementById('bHeader').checked,
                 style: document.getElementById('vStyle').value, color: document.getElementById('vColor').value,
-                img: imgData, logo: logoData, 
+                workOrder: document.getElementById('vWorkOrder').value, cutDate: document.getElementById('vCutDate').value,
+                noteHeader: document.getElementById('vNoteHeader').value, sizeDesc: document.getElementById('vSizeDesc').value, fabric: document.getElementById('vFabric').value,
+                item: document.getElementById('vItem').value, sales: document.getElementById('vSales').value, designer: document.getElementById('vDesigner').value,
+                packaging: getPackagingValue(),
+                tableMode: tableMode, workNote: document.getElementById('vWorkNote').value,
+                imgList: imgList, logo: logoData, 
                 detail: document.getElementById('vDetail').value, cDetail: document.getElementById('cDetail').value, bDetail: document.getElementById('bDetail').checked,
                 date: document.getElementById('vDate').value,
                 footer: document.getElementById('vFooter').value, cFooter: document.getElementById('cFooter').value, bFooter: document.getElementById('bFooter').checked,
@@ -684,14 +1076,27 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     document.getElementById('vTitle').value = data.title || ''; document.getElementById('cTitle').value = data.cTitle || '#000000'; document.getElementById('bTitle').checked = data.bTitle; toggleChk('bTitle');
+                    document.getElementById('vYear').value = data.year || '';
                     document.getElementById('vUnit').value = data.unit || ''; document.getElementById('vVendor').value = data.vendor || ''; document.getElementById('cHeader').value = data.cHeader || '#000000'; document.getElementById('bHeader').checked = data.bHeader; toggleChk('bHeader');
-                    document.getElementById('vStyle').value = data.style || ''; document.getElementById('vColor').value = data.color || ''; imgData = data.img; logoData = data.logo; 
+                    document.getElementById('vStyle').value = data.style || ''; document.getElementById('vColor').value = data.color || ''; logoData = data.logo || null;
+                    document.getElementById('vWorkOrder').value = data.workOrder || ''; document.getElementById('vCutDate').value = data.cutDate || '';
+                    document.getElementById('vNoteHeader').value = data.noteHeader || ''; document.getElementById('vSizeDesc').value = data.sizeDesc || ''; document.getElementById('vFabric').value = data.fabric || '';
+                    document.getElementById('vItem').value = data.item || ''; document.getElementById('vSales').value = data.sales || ''; document.getElementById('vDesigner').value = data.designer || '';
+                    selectPackagingSilent(data.packaging || '一般');
+                    document.getElementById('vWorkNote').value = data.workNote || '';
+                    const mode = (data.tableMode === 'roster' || data.tableMode === 'combo') ? data.tableMode : 'qty';
+                    document.querySelector(`input[name="tableMode"][value="${mode}"]`).checked = true;
+                    setTableModeSilent(mode);
                     document.getElementById('vDetail').value = data.detail || ''; document.getElementById('cDetail').value = data.cDetail || '#000000'; document.getElementById('bDetail').checked = data.bDetail; toggleChk('bDetail');
                     document.getElementById('vDate').value = data.date || ''; document.getElementById('vFooter').value = data.footer || ''; document.getElementById('cFooter').value = data.cFooter || '#ff0000'; document.getElementById('bFooter').checked = data.bFooter; toggleChk('bFooter');
 
                     document.getElementById('sizeList').innerHTML = '';
                     if(data.rows && data.rows.length > 0) { 
                         data.rows.forEach(r => {
+                            if (mode === 'combo') {
+                                addSize('', '', '', '', '', r.name || '', r.num || '', r.size1 || '', r.size2 || '');
+                                return;
+                            }
                             let rHtml = r.r; let sHtml = r.s || '';
                             if(r.b || (r.c && r.c !== '#000000')) {
                                 let style = [];
@@ -699,11 +1104,31 @@
                                 if(r.c && r.c !== '#000000') style.push(`color:${r.c}`);
                                 rHtml = `<span style="${style.join(';')}">${rHtml}</span>`;
                             }
-                            addSize(sHtml, r.q, rHtml);
+                            addSize(sHtml, r.q, rHtml, r.q2 || '', r.r2 || '');
                         }); 
                     } else { addSize(); }
-                    render();
-                    hasUnsavedChanges = false; // 剛讀取完成，內容與檔案一致，尚無新變更
+
+                    // 示意圖：新格式(imgList陣列，含每張圖的位置/縮放)直接還原；
+                    // 舊版JSON(單張img字串)自動量測尺寸後轉換成新格式的第一張圖，維持向下相容
+                    imgList = []; selectedImgId = null; nextImgId = 1;
+                    const finishLoad = () => { render(); hasUnsavedChanges = false; };
+                    if (Array.isArray(data.imgList) && data.imgList.length > 0) {
+                        imgList = data.imgList.map(it => ({ id: nextImgId++, src: it.src, x: it.x, y: it.y, scale: it.scale, naturalW: it.naturalW, naturalH: it.naturalH }));
+                        finishLoad();
+                    } else if (data.img) {
+                        const probe = new Image();
+                        probe.onload = () => {
+                            const naturalW = probe.naturalWidth || 1, naturalH = probe.naturalHeight || 1;
+                            const fitScale = Math.min(IMG_BOX_TRUE_W / naturalW, IMG_BOX_TRUE_H / naturalH, 1);
+                            const w = naturalW * fitScale, h = naturalH * fitScale;
+                            imgList = [{ id: nextImgId++, src: data.img, x: (IMG_BOX_TRUE_W - w) / 2, y: (IMG_BOX_TRUE_H - h) / 2, scale: fitScale, naturalW, naturalH }];
+                            finishLoad();
+                        };
+                        probe.onerror = finishLoad;
+                        probe.src = data.img;
+                    } else {
+                        finishLoad();
+                    }
                 } catch(e) { alert('格式錯誤'); }
                 input.value = '';
             };
@@ -732,6 +1157,7 @@
             }
 
             showLoading(true, `PDF 產出中 (共 ${sheets.length} 頁)，請稍候...`);
+            document.body.classList.add('exporting'); // 擷取畫面前隱藏示意圖的拖曳/縮放/刪除控制項，避免印到互動用UI
             try {
                 const { jsPDF } = window.jspdf; const doc = new jsPDF('p', 'mm', 'a4');
                 for(let i=0; i<sheets.length; i++) {
@@ -751,7 +1177,7 @@
                 } else {
                     doc.save(`${inputFileName.trim()}.pdf`);
                 }
-            } catch(e) { if (mobileWin) mobileWin.close(); alert("PDF 產出失敗：" + e.message); } finally { showLoading(false); }
+            } catch(e) { if (mobileWin) mobileWin.close(); alert("PDF 產出失敗：" + e.message); } finally { document.body.classList.remove('exporting'); showLoading(false); }
         }
 
         async function exportToJpeg() {
@@ -766,6 +1192,7 @@
             }
 
             showLoading(true, `圖片產出中 (共 ${sheets.length} 張)，請稍候...`);
+            document.body.classList.add('exporting'); // 擷取畫面前隱藏示意圖的拖曳/縮放/刪除控制項，避免印到互動用UI
             try {
                 const baseName = `${new Date().toISOString().slice(0,10)}_${document.getElementById('vUnit').value || '單據'}`;
                 const images = [];
@@ -797,7 +1224,7 @@
                         alert('請允許此網站開啟新視窗，才能顯示圖片供您長按儲存');
                     }
                 }
-            } catch(e) { if (mobileWin) mobileWin.close(); alert("圖片產出失敗：" + e.message); } finally { showLoading(false); }
+            } catch(e) { if (mobileWin) mobileWin.close(); alert("圖片產出失敗：" + e.message); } finally { document.body.classList.remove('exporting'); showLoading(false); }
         }
 
         function htmlToExcelRichText(htmlString) {
@@ -877,6 +1304,23 @@
             return Math.max(0, (areaPx - itemW) / 2) / XLS_COLA_PX;
         }
 
+        // 把目前畫面上示意圖框內「多張圖片的最終拖曳/縮放結果」直接拍成一張合成PNG，
+        // 這樣Excel匯出時只要放這一張圖就好，不用在Excel裡重新計算每張圖各自的座標，畫面所見即所得
+        async function captureImgAreaSnapshot() {
+            const boxEl = document.querySelector('.sheet .img-area');
+            if (!boxEl || imgList.length === 0) return null;
+            document.body.classList.add('exporting');
+            try {
+                const prevTransform = boxEl.closest('.sheet').style.transform;
+                boxEl.closest('.sheet').style.transform = 'none';
+                const canvas = await html2canvas(boxEl, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+                boxEl.closest('.sheet').style.transform = prevTransform;
+                return canvas.toDataURL('image/png');
+            } finally {
+                document.body.classList.remove('exporting');
+            }
+        }
+
         async function exportToExcel() {
             const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('製單');
             ws.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, horizontalCentered: true, margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } };
@@ -897,25 +1341,35 @@
                 for (let i = 0; i < LOGO_ROWS; i++) { const r = ws.addRow([]); r.height = logoRowHeightPt; }
             }
 
-            const r1 = ws.addRow([document.getElementById('vTitle').value]); ws.mergeCells(`A${r1.number}:E${r1.number}`); r1.height = 35;
+            const r1 = ws.addRow([document.getElementById('vTitle').value + (document.getElementById('vYear').value || '')]); ws.mergeCells(`A${r1.number}:E${r1.number}`); r1.height = 35;
             r1.font = { size: 20, bold: sTitle.bold, color: { argb: sTitle.argb } }; r1.alignment = { horizontal: 'center', vertical: 'middle' };
 
-            [['單位:', document.getElementById('vUnit').value, '廠商:', document.getElementById('vVendor').value], ['衣版:', document.getElementById('vStyle').value, '顏色:', document.getElementById('vColor').value]].forEach(v => {
-                const r = ws.addRow([v[0], v[1], '', v[2], v[3]]); ws.mergeCells(`B${r.number}:C${r.number}`); r.height = 24;
-                [1, 4].forEach(c => { r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }; r.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' }; r.getCell(c).font = { bold: true }; });
-                [2, 5].forEach(c => { r.getCell(c).font = { color: { argb: sHead.argb }, bold: sHead.bold }; r.getCell(c).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; });
+            const packagingVal = getPackagingValue();
+            [
+                ['版號:', document.getElementById('vStyle').value, '工單號:', document.getElementById('vWorkOrder').value],
+                ['裁片日期:', document.getElementById('vCutDate').value, '交貨日期:', document.getElementById('vDate').value],
+                ['客戶單位:', document.getElementById('vUnit').value, '車縫單位:', document.getElementById('vVendor').value],
+                ['品項:', document.getElementById('vItem').value, '顏色:', document.getElementById('vColor').value],
+                ['尺寸標說明:', document.getElementById('vSizeDesc').value, '布料:', document.getElementById('vFabric').value],
+                ['業務:', document.getElementById('vSales').value, '美編:', document.getElementById('vDesigner').value],
+                ['備註:', document.getElementById('vNoteHeader').value, '包裝:', `${packagingVal === '一般' ? '☑' : '☐'}一般 ${packagingVal === '禾田專用' ? '☑' : '☐'}禾田專用`]
+            ].forEach(v => {
+                const r = ws.addRow([v[0], v[1], '', v[2], v[3]]); ws.mergeCells(`B${r.number}:C${r.number}`); r.height = 22;
+                [1, 4].forEach(c => { r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }; r.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' }; r.getCell(c).font = { bold: true, size: 10 }; });
+                [2, 5].forEach(c => { r.getCell(c).font = { color: { argb: sHead.argb }, bold: sHead.bold, size: 10 }; r.getCell(c).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }; });
             });
 
-            // 示意圖方框固定為寬550 x 高330，保留列的實際列高總和精確等於這個高度，
-            // 這樣不論上傳的圖片是直的、橫的、還是正方形，永遠會等比縮放並完整落在方框內，不會超出邊框或跑位
+            // 示意圖：直接用目前畫面上多張圖片的最終排列拍成一張合成快照，方框固定為寬550 x 高330，
+            // 保留列的實際列高總和精確等於這個高度，不論排了幾張圖、怎麼排，永遠完整落在方框內，不會超出邊框或跑位
             const IMG_BOX_W = 550, IMG_BOX_H = 330, IMG_ROWS = 15;
-            const imgLabelRow = ws.addRow(['示意圖/圖稿：']); imgLabelRow.font = { bold: true }; ws.mergeCells(`A${imgLabelRow.number}:E${imgLabelRow.number}`);
+            const imgLabelRow = ws.addRow(['示意圖/裁片圖：']); imgLabelRow.font = { bold: true }; ws.mergeCells(`A${imgLabelRow.number}:E${imgLabelRow.number}`);
             const iStart = imgLabelRow.number + 1;
             const imgRowHeightPt = (IMG_BOX_H * XLS_PT_PER_PX) / IMG_ROWS;
             for (let i = 0; i < IMG_ROWS; i++) { const r = ws.addRow(['']); r.height = imgRowHeightPt; }
             const iEnd = ws.rowCount; ws.mergeCells(`A${iStart}:E${iEnd}`);
-            if (imgData) {
-                const mainPng = await toPngDataUrl(imgData);
+            const imgSnapshotSrc = await captureImgAreaSnapshot();
+            if (imgSnapshotSrc) {
+                const mainPng = await toPngDataUrl(imgSnapshotSrc);
                 const { w, h } = xlsFitBox(mainPng.width, mainPng.height, IMG_BOX_W, IMG_BOX_H);
                 const colOffset = xlsCenterColOffset(w);
                 const rowOffsetUnits = Math.max(0, (IMG_BOX_H - h) / 2) / IMG_BOX_H * IMG_ROWS; // 垂直置中：換算成列偏移量
@@ -923,38 +1377,113 @@
             }
 
             const detText = document.getElementById('vDetail').value;
-            const detLabelRow = ws.addRow(['製作細節:', '', '', '希望交期:', document.getElementById('vDate').value]);
-            const rDet = ws.addRow([detText]); rDet.height = Math.max(60, (detText.split('\n').length + Math.ceil(detText.length / 40)) * 18);
-            const spacerRow = ws.addRow([]);
-            ws.mergeCells(`A${rDet.number}:C${spacerRow.number}`); ws.mergeCells(`D${detLabelRow.number}:D${spacerRow.number}`); ws.mergeCells(`E${detLabelRow.number}:E${spacerRow.number}`);
+            const detLabelRow = ws.addRow(['製作說明:']); detLabelRow.getCell(1).font = { bold: true };
+            const rDet = ws.addRow([detText]); rDet.height = Math.max(50, (detText.split('\n').length + Math.ceil(detText.length / 60)) * 18);
+            ws.mergeCells(`A${rDet.number}:E${rDet.number}`);
             ws.getCell(`A${rDet.number}`).font = { color: { argb: sDet.argb }, bold: sDet.bold }; ws.getCell(`A${rDet.number}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-            ws.getCell(`D${detLabelRow.number}`).alignment = { horizontal: 'right', vertical: 'top', font:{bold:true} }; ws.getCell(`E${detLabelRow.number}`).alignment = { horizontal: 'center', vertical: 'top', size: 14, font:{bold:true} };
 
-            const hRow = ws.addRow(['尺寸', '數量', '', '備註', '']); ws.mergeCells(`D${hRow.number}:E${hRow.number}`); hRow.height = 28; hRow.font = { bold: true };
-            hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+            let hRow;
+            if (tableMode === 'roster') {
+                hRow = ws.addRow(['尺寸', '號碼', '姓名', '號碼', '姓名']);
+                hRow.height = 28; hRow.font = { bold: true };
+                hRow.eachCell(c => { c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+                [1, 3].forEach(c => { hRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; });
+                [2, 4].forEach(c => { hRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8CBAD' } }; });
+                hRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+            } else if (tableMode === 'combo') {
+                hRow = ws.addRow(['姓名', '背號', '衣尺寸', '褲尺寸', '']);
+                hRow.height = 28; hRow.font = { bold: true };
+                hRow.eachCell(c => { c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+                [1, 3, 4, 5].forEach(c => { hRow.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; });
+                hRow.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8CBAD' } };
+            } else {
+                hRow = ws.addRow(['尺寸', '數量', '', '備註', '']);
+                ws.mergeCells(`D${hRow.number}:E${hRow.number}`); hRow.height = 28; hRow.font = { bold: true };
+                hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+            }
+
+            if (tableMode === 'roster') {
+                const workNoteVal = document.getElementById('vWorkNote').value;
+                if (workNoteVal.trim()) {
+                    const wnLabelRow = ws.addRow(['做工說明:']); wnLabelRow.getCell(1).font = { bold: true };
+                    const wnRow = ws.addRow([workNoteVal]); wnRow.height = Math.max(40, (workNoteVal.split('\n').length + Math.ceil(workNoteVal.length / 60)) * 18);
+                    ws.mergeCells(`A${wnRow.number}:E${wnRow.number}`);
+                    ws.getCell(`A${wnRow.number}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+                }
+            }
 
             let total = 0;
             document.querySelectorAll('.size-item').forEach(rItem => {
+                if (tableMode === 'combo') {
+                    const nameEl = rItem.querySelector('.inp-name'), numEl = rItem.querySelector('.inp-num'), s1El = rItem.querySelector('.inp-size1'), s2El = rItem.querySelector('.inp-size2');
+                    if (!nameEl) return;
+                    const nameHtml = nameEl.innerHTML, num = numEl.value, size1Html = s1El.innerHTML, size2Html = s2El.innerHTML;
+                    const nameText = nameEl.textContent, size1Text = s1El.textContent, size2Text = s2El.textContent;
+                    if (nameText.trim() || num || size1Text.trim() || size2Text.trim() || nameHtml.includes('<img')) {
+                        const row = ws.addRow(['', parseInt(num)||'', '', '', '']);
+                        row.height = Math.max(24, Math.ceil(nameText.length / 20) * 18);
+                        row.getCell(1).value = htmlToExcelRichText(nameHtml);
+                        row.getCell(3).value = htmlToExcelRichText(size1Html);
+                        row.getCell(4).value = htmlToExcelRichText(size2Html);
+                        row.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                        row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+                        row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+                        row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+                        total += 1; // 背號只是選填的識別碼，不是數量，合計算訂製人數
+                    }
+                    return;
+                }
                 const sHtml = rItem.querySelector('.inp-s').innerHTML, q = rItem.querySelector('.inp-q').value, rHtml = rItem.querySelector('.inp-r').innerHTML;
                 const sText = rItem.querySelector('.inp-s').textContent, rText = rItem.querySelector('.inp-r').textContent;
-                
-                if(sText.trim() || q || rText.trim() || sHtml.includes('<img') || rHtml.includes('<img')) {
-                    const row = ws.addRow(['', parseInt(q)||'', '', '', '']); ws.mergeCells(`D${row.number}:E${row.number}`);
-                    row.height = Math.max(24, Math.ceil(rText.length / 20) * 18);
-                    
-                    row.getCell(1).value = htmlToExcelRichText(sHtml);
-                    row.getCell(4).value = htmlToExcelRichText(rHtml);
+                const q2El = rItem.querySelector('.inp-q2'), r2El = rItem.querySelector('.inp-r2');
+                const q2 = q2El ? q2El.value : '';
+                const r2Html = r2El ? r2El.innerHTML : '';
+                const r2Text = r2El ? r2El.textContent : '';
+                const hasEntry1 = sText.trim() || q || rText.trim() || sHtml.includes('<img') || rHtml.includes('<img');
+                const hasEntry2 = q2 || r2Text.trim() || r2Html.includes('<img');
 
-                    row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                    row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-                    row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-
-                    if(q && !isNaN(q)) total += parseInt(q);
+                if(hasEntry1 || hasEntry2) {
+                    let row;
+                    if (tableMode === 'roster') {
+                        row = ws.addRow(['', parseInt(q)||'', '', parseInt(q2)||'', '']);
+                        row.height = Math.max(24, Math.ceil(Math.max(rText.length, r2Text.length) / 12) * 18);
+                        row.getCell(1).value = htmlToExcelRichText(sHtml);
+                        row.getCell(3).value = htmlToExcelRichText(rHtml);
+                        row.getCell(5).value = htmlToExcelRichText(r2Html);
+                        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+                        row.getCell(3).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                        row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+                        row.getCell(5).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                        // 名單細項模式：號碼是背號，不是數量，合計要算人數/件數而不是加總背號
+                        if (hasEntry1) total += 1;
+                        if (hasEntry2) total += 1;
+                    } else {
+                        row = ws.addRow(['', parseInt(q)||'', '', '', '']); ws.mergeCells(`D${row.number}:E${row.number}`);
+                        row.height = Math.max(24, Math.ceil(rText.length / 20) * 18);
+                        row.getCell(1).value = htmlToExcelRichText(sHtml);
+                        row.getCell(4).value = htmlToExcelRichText(rHtml);
+                        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+                        row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+                        if(q && !isNaN(q)) total += parseInt(q);
+                    }
                 }
             });
 
-            const fRow = ws.addRow(['總計', total, '', document.getElementById('vFooter').value, '']); ws.mergeCells(`D${fRow.number}:E${fRow.number}`); fRow.height = 30; fRow.font = { bold: true };
-            fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; fRow.getCell(4).font = { color: { argb: sFoot.argb }, bold: sFoot.bold }; fRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+            let fRow;
+            if (tableMode === 'roster') {
+                fRow = ws.addRow(['合計', total, '', '', '']); fRow.height = 30; fRow.font = { bold: true };
+                fRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
+                fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+            } else if (tableMode === 'combo') {
+                fRow = ws.addRow(['合計', total, '', '', '']); fRow.height = 30; fRow.font = { bold: true };
+                fRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } };
+                fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+            } else {
+                fRow = ws.addRow(['總計', total, '', document.getElementById('vFooter').value, '']); ws.mergeCells(`D${fRow.number}:E${fRow.number}`); fRow.height = 30; fRow.font = { bold: true };
+                fRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; fRow.getCell(4).font = { color: { argb: sFoot.argb }, bold: sFoot.bold }; fRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+            }
 
             ws.eachRow((row, rn) => { if(rn >= (logoData ? 4 : 1)) row.eachCell({ includeEmpty: true }, (cell, cn) => { if (cn <= 5) cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }; }); });
             ws.pageSetup.printArea = `A1:E${fRow.number}`;
