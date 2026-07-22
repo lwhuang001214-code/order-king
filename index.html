@@ -320,15 +320,16 @@
         .info-grid-v2 {
             display: grid;
             grid-template-columns: 60px 1fr 60px 1fr 60px 1fr 60px 1.2fr;
-            grid-auto-rows: 42px;
+            grid-auto-rows: minmax(42px, auto);
             border: 2px solid #000;
             margin-bottom: 6px;
             font-size: 9pt;
         }
-        .info-grid-v2 .grid-cell { padding: 4px 5px; border: 1px solid #000; display: flex; align-items: center; overflow: visible; box-sizing: border-box; }
+        .info-grid-v2 .grid-cell { padding: 4px 5px; border: 1px solid #000; display: flex; align-items: center; overflow: visible; box-sizing: border-box; overflow-wrap: anywhere; word-break: break-word; }
         .info-grid-v2 .cell-label { background: #eee; font-weight: bold; justify-content: center; text-align: center; line-height: 1.2; white-space: nowrap; }
-        .info-grid-v2 .cell-stack { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; line-height: 1.2; width: 100%; white-space: nowrap; }
-        .info-grid-v2 .grid-cell:not(.cell-label) .cell-stack { align-items: flex-start; }
+        .info-grid-v2 .cell-stack { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1px; line-height: 1.2; width: 100%; }
+        .info-grid-v2 .cell-label .cell-stack { white-space: nowrap; } /* 標籤是我們固定寫死的短字(如"裁片/日期")，維持不換行 */
+        .info-grid-v2 .grid-cell:not(.cell-label) .cell-stack { align-items: flex-start; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
         .pack-check { font-weight: bold; white-space: nowrap; }
 
         .img-area { width: 100%; height: 320px; border: 2px solid #000; margin-bottom: 8px; overflow: hidden; background: #fff; position: relative; touch-action: none; }
@@ -846,12 +847,8 @@
             });
 
             const area = document.getElementById('previewArea'); area.innerHTML = ''; 
-            let pages = []; let remainingRows = [...data.rows];
-            pages.push({ type: 'first', rows: remainingRows.splice(0, ROWS_PAGE1) });
-            while(remainingRows.length > 0) pages.push({ type: 'other', rows: remainingRows.splice(0, ROWS_PAGE_N) });
-
             const badgeText = document.getElementById('pageBadgeText');
-            if (badgeText) badgeText.textContent = `共 ${pages.length} 頁`;
+            const emptyPlaceholderRow = tableMode === 'combo' ? {name:'',num:'',size1:'',size2:''} : {s:'',q:'',r:'',q2:'',r2:''};
 
             // 產生單張示意圖的HTML(可拖曳/縮放版本，用於第一頁的示意圖框)
             function buildImgItemHtml(item) {
@@ -864,17 +861,18 @@
                 </div>`;
             }
 
-            pages.forEach((page, idx) => {
-                const sheet = document.createElement('div'); sheet.className = 'sheet';
-                let html = '';
-                if (page.type === 'first' && logoData) html += `<div class="logo-area"><img src="${logoData}"></div>`;
-                const titleText = page.type === 'first' ? data.title : `${data.title} (續頁)`;
-                html += `<div class="sheet-header"><h1 class="sheet-title" style="color:${styles.title.color}; font-weight:${styles.title.bold?'bold':'normal'}">${titleText}</h1></div>`;
-                
-                if (page.type === 'first') {
+            // 產生表頭區塊(第一頁：版頭資訊格線+示意圖框+製作說明；續頁：精簡版頭)。
+            // 抽成獨立函式，因為「量測用試算」跟「正式輸出」都需要一模一樣的表頭HTML。
+            function buildHeaderHtml(pageType) {
+                let h = '';
+                if (pageType === 'first' && logoData) h += `<div class="logo-area"><img src="${logoData}"></div>`;
+                const titleText = pageType === 'first' ? data.title : `${data.title} (續頁)`;
+                h += `<div class="sheet-header"><h1 class="sheet-title" style="color:${styles.title.color}; font-weight:${styles.title.bold?'bold':'normal'}">${titleText}</h1></div>`;
+
+                if (pageType === 'first') {
                     const hStyle = `color:${styles.header.color}; font-weight:${styles.header.bold?'bold':'normal'};`;
                     const packChecked = (v) => data.packaging === v ? '☑' : '☐';
-                    html += `<div class="info-grid-v2">
+                    h += `<div class="info-grid-v2">
                         <div class="grid-cell cell-label"><div class="cell-stack"><span>版號</span><span>工單號</span></div></div>
                         <div class="grid-cell" style="${hStyle}"><div class="cell-stack"><span>${data.style}</span><span>${data.workOrder}</span></div></div>
                         <div class="grid-cell cell-label"><div class="cell-stack"><span>裁片</span><span>日期</span></div></div><div class="grid-cell" style="${hStyle}">${data.cutDate}</div>
@@ -893,49 +891,113 @@
                     </div><div style="font-weight:bold; margin-bottom:5px;">示意圖/裁片圖：</div>
                     <div class="img-area">${imgList.length ? imgList.map(buildImgItemHtml).join('') : `<span class="img-placeholder">圖稿預覽</span>`}</div>`;
                     const dStyle = `color:${styles.detail.color}; font-weight:${styles.detail.bold?'bold':'normal'}`;
-                    html += `<div style="font-weight:bold; margin-bottom:5px;">製作說明：</div>
+                    h += `<div style="font-weight:bold; margin-bottom:5px;">製作說明：</div>
                     <div class="detail-area"><div class="detail-text" style="${dStyle}; width:100%;">${data.detail}</div></div>`;
                 } else {
-                    html += `<div style="margin-bottom:10px; font-size:14px; color:#666;">版號：${data.style} / 顏色：${data.color}</div>`;
+                    h += `<div style="margin-bottom:10px; font-size:14px; color:#666;">版號：${data.style} / 顏色：${data.color}</div>`;
                     if (imgList.length) {
                         const r = 120 / IMG_BOX_TRUE_H; // 續頁的小圖框比正式示意圖框矮，依比例縮小顯示(僅供參考、不可互動)
                         const smallHtml = imgList.map(item => {
-                            const w = item.naturalW * item.scale * r, h = item.naturalH * item.scale * r, x = item.x * r, y = item.y * r;
-                            return `<img src="${item.src}" style="position:absolute; left:${x}px; top:${y}px; width:${w}px; height:${h}px; object-fit:contain;">`;
+                            const w = item.naturalW * item.scale * r, h2 = item.naturalH * item.scale * r, x = item.x * r, y = item.y * r;
+                            return `<img src="${item.src}" style="position:absolute; left:${x}px; top:${y}px; width:${w}px; height:${h2}px; object-fit:contain;">`;
                         }).join('');
-                        html += `<div class="img-area-small">${smallHtml}</div>`;
+                        h += `<div class="img-area-small">${smallHtml}</div>`;
                     }
+                }
+                return h;
+            }
+
+            // 產生表格HTML(含表頭列、資料列、選擇性的合計列)。量測階段也用同一份函式，確保量出來的高度跟正式輸出一致。
+            function buildTableHtml(rowsForPage, includeFooter) {
+                let h = '';
+                if (tableMode === 'roster') {
+                    h += `<table class="order-table"><thead><tr><th width="9%">尺寸</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th>做工說明</th></tr></thead><tbody>`;
+                    rowsForPage.forEach((r, i) => {
+                        h += `<tr><td>${r.s}</td><td>${r.q}</td><td style="text-align:left; padding-left:8px;">${r.r}</td><td>${r.q2||''}</td><td style="text-align:left; padding-left:8px;">${r.r2||''}</td>`;
+                        if (i === 0) h += `<td rowspan="${rowsForPage.length}" style="text-align:left; padding-left:8px; white-space:pre-wrap; vertical-align:top;">${data.workNote}</td>`;
+                        h += `</tr>`;
+                    });
+                    if (includeFooter) h += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="4" style="font-weight:bold; background:#eee;">${total > 0 ? total : ''}</td><td style="font-weight:bold; background:#eee;"></td></tr></tfoot>`;
+                    h += `</tbody></table>`;
+                } else if (tableMode === 'combo') {
+                    h += `<table class="order-table"><thead><tr><th width="30%">姓名</th><th width="18%" class="th-orange">背號</th><th width="26%">衣尺寸</th><th width="26%">褲尺寸</th></tr></thead><tbody>`;
+                    rowsForPage.forEach(r => { h += `<tr><td style="text-align:left; padding-left:8px;">${r.name}</td><td>${r.num}</td><td>${r.size1}</td><td style="text-align:center;">${r.size2}</td></tr>`; });
+                    if (includeFooter) h += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="3" style="font-weight:bold; background:#eee; text-align:center;">${total > 0 ? total + ' 人' : ''}</td></tr></tfoot>`;
+                    h += `</tbody></table>`;
+                } else {
+                    h += `<table class="order-table"><thead><tr><th width="15%">尺寸</th><th width="15%">數量</th><th width="5%"></th><th>備註 / 確認</th></tr></thead><tbody>`;
+                    rowsForPage.forEach(r => { h += `<tr><td>${r.s}</td><td>${r.q}</td><td></td><td>${r.r}</td></tr>`; });
+                    if (includeFooter) {
+                        const fStyle = `color:${styles.footer.color}; font-weight:${styles.footer.bold?'bold':'normal'}`;
+                        h += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
+                    }
+                    h += `</tbody></table>`;
+                }
+                return h;
+            }
+
+            // 用一個隱藏在畫面外的試算區塊，實際渲染「表頭+N列」量出真正的高度，
+            // 抓出這一頁最多塞得下幾列(超出A4可印範圍就不算)。量測時永遠假設合計列也在，
+            // 這樣萬一這頁真的是最後一頁，也不會因為多了合計列才又超出。
+            function measureFitCount(pageType, candidateAllRows, cap) {
+                const maxN = Math.min(cap, candidateAllRows.length);
+                if (maxN === 0) return 0;
+                const testWrap = document.createElement('div');
+                testWrap.className = 'sheet-wrap';
+                testWrap.style.cssText = 'position:absolute; left:-9999px; top:0; visibility:hidden;';
+                const testSheet = document.createElement('div'); testSheet.className = 'sheet';
+                testWrap.appendChild(testSheet);
+                area.appendChild(testWrap);
+
+                const headerHtml = buildHeaderHtml(pageType);
+                function fits(n) {
+                    testSheet.innerHTML = headerHtml + buildTableHtml(candidateAllRows.slice(0, n), true);
+                    const sheetRect = testSheet.getBoundingClientRect();
+                    const paddingBottom = parseFloat(getComputedStyle(testSheet).paddingBottom) || 0;
+                    const contentBottomLimit = sheetRect.bottom - paddingBottom;
+                    const table = testSheet.querySelector('table.order-table');
+                    return table.getBoundingClientRect().bottom <= contentBottomLimit + 0.5;
                 }
 
-                const emptyPlaceholderRow = tableMode === 'combo' ? {name:'',num:'',size1:'',size2:''} : {s:'',q:'',r:'',q2:'',r2:''};
-                const rowsToShow = (page.rows.length === 0 && page.type === 'first') ? [emptyPlaceholderRow] : page.rows;
-                if (tableMode === 'roster') {
-                    html += `<table class="order-table"><thead><tr><th width="9%">尺寸</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th width="10%" class="th-orange">號碼</th><th width="15%">姓名</th><th>做工說明</th></tr></thead><tbody>`;
-                    rowsToShow.forEach((r, i) => {
-                        html += `<tr><td>${r.s}</td><td>${r.q}</td><td style="text-align:left; padding-left:8px;">${r.r}</td><td>${r.q2||''}</td><td style="text-align:left; padding-left:8px;">${r.r2||''}</td>`;
-                        if (i === 0) html += `<td rowspan="${rowsToShow.length}" style="text-align:left; padding-left:8px; white-space:pre-wrap; vertical-align:top;">${data.workNote}</td>`;
-                        html += `</tr>`;
-                    });
-                    if (idx === pages.length - 1) {
-                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="4" style="font-weight:bold; background:#eee;">${total > 0 ? total : ''}</td><td style="font-weight:bold; background:#eee;"></td></tr></tfoot>`;
-                    }
-                    html += `</tbody></table>`;
-                } else if (tableMode === 'combo') {
-                    html += `<table class="order-table"><thead><tr><th width="30%">姓名</th><th width="18%" class="th-orange">背號</th><th width="26%">衣尺寸</th><th width="26%">褲尺寸</th></tr></thead><tbody>`;
-                    rowsToShow.forEach(r => { html += `<tr><td style="text-align:left; padding-left:8px;">${r.name}</td><td>${r.num}</td><td>${r.size1}</td><td style="text-align:center;">${r.size2}</td></tr>`; });
-                    if (idx === pages.length - 1) {
-                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">合計</td><td colspan="3" style="font-weight:bold; background:#eee; text-align:center;">${total > 0 ? total + ' 人' : ''}</td></tr></tfoot>`;
-                    }
-                    html += `</tbody></table>`;
+                let best;
+                if (fits(maxN)) {
+                    best = maxN; // 全部都塞得下，不用再逐一測試
                 } else {
-                    html += `<table class="order-table"><thead><tr><th width="15%">尺寸</th><th width="15%">數量</th><th width="5%"></th><th>備註 / 確認</th></tr></thead><tbody>`;
-                    rowsToShow.forEach(r => { html += `<tr><td>${r.s}</td><td>${r.q}</td><td></td><td>${r.r}</td></tr>`; });
-                    if (idx === pages.length - 1) {
-                        const fStyle = `color:${styles.footer.color}; font-weight:${styles.footer.bold?'bold':'normal'}`;
-                        html += `<tfoot><tr><td style="font-weight:bold; background:#eee;">總計</td><td style="font-weight:bold;">${total > 0 ? total : ''}</td><td></td><td style="${fStyle}">${data.footer}</td></tr></tfoot>`;
+                    let lo = 1, hi = maxN; best = 0;
+                    while (lo <= hi) {
+                        const mid = (lo + hi) >> 1;
+                        if (fits(mid)) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
                     }
-                    html += `</tbody></table>`;
+                    best = Math.max(best, 1); // 保底至少放1列，避免表頭太高時卡住湊不出頁面、資料一直搬不完
                 }
+                area.removeChild(testWrap);
+                return best;
+            }
+
+            // --- Phase 1：實際量測決定每一頁能放幾列，取代原本寫死的6列/20列 ---
+            let remainingRows = [...data.rows];
+            let pages = [];
+            if (remainingRows.length === 0) {
+                pages.push({ type: 'first', rows: [] });
+            } else {
+                let isFirst = true;
+                while (remainingRows.length > 0) {
+                    const type = isFirst ? 'first' : 'other';
+                    const cap = isFirst ? ROWS_PAGE1 : ROWS_PAGE_N;
+                    const n = measureFitCount(type, remainingRows, cap);
+                    pages.push({ type, rows: remainingRows.splice(0, n) });
+                    isFirst = false;
+                }
+            }
+
+            if (badgeText) badgeText.textContent = `共 ${pages.length} 頁`;
+
+            // --- Phase 2：用Phase 1量好的實際分頁結果，正式輸出每一頁 ---
+            pages.forEach((page, idx) => {
+                const sheet = document.createElement('div'); sheet.className = 'sheet';
+                let html = buildHeaderHtml(page.type);
+                const rowsToShow = (page.rows.length === 0 && page.type === 'first') ? [emptyPlaceholderRow] : page.rows;
+                html += buildTableHtml(rowsToShow, idx === pages.length - 1);
                 html += `<div class="page-num">Page ${idx+1} / ${pages.length}</div>`;
                 sheet.innerHTML = html;
                 const wrap = document.createElement('div'); wrap.className = 'sheet-wrap';
